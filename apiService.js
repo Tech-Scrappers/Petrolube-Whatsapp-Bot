@@ -13,7 +13,11 @@ async function validateMechanicByPhone(phoneNumber) {
     try {
         const normalizedPhone = phoneNumber.replace(/^\+/, '').replace(/\s+/g, '');
         const apiUrl = `${EXTERNAL_API_BASE_URL}/bot/mechanics?mobile_number=${encodeURIComponent(normalizedPhone)}`;
-        const response = await axios.get(apiUrl);
+        const response = await axios.get(apiUrl, {
+            headers: {
+                'X-Petrolube-Secret-Key': process.env.PETROLUBE_SECRET_KEY
+            }
+        });
         if (response.data && response.data.data) {
             return {
                 id: response.data.data.id,
@@ -74,12 +78,44 @@ async function logOilChange(mechanicId, customerMobile, plateNumber, qrCodes, oi
     return key;
 }
 
+// Fetch leaderboard data
+async function fetchLeaderboard(mechanicId) {
+    try {
+        const response = await axios.get(`${EXTERNAL_API_BASE_URL}/bot/leaderboard/${mechanicId}`, {
+            headers: {
+                'X-Petrolube-Secret-Key': process.env.PETROLUBE_SECRET_KEY
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error?.response?.data || error.message);
+        return null;
+    }
+}
+
+// Fetch mechanic wallet data
+async function fetchMechanicWallet(mechanicId) {
+    try {
+        const response = await axios.get(`${EXTERNAL_API_BASE_URL}/bot/mechanics/${mechanicId}/wallet`, {
+            headers: {
+                'X-Petrolube-Secret-Key': process.env.PETROLUBE_SECRET_KEY
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching mechanic wallet:', error?.response?.data || error.message);
+        return null;
+    }
+}
+
 module.exports = {
     validateMechanicByPhone,
     validateQRCodes,
     validateCustomer,
     updateMechanicWallet,
     logOilChange,
+    fetchLeaderboard,
+    fetchMechanicWallet,
     WHATSAPP_API_URL,
     API_TOKEN,
     PHONE_NUMBER_ID,

@@ -71,9 +71,9 @@ async function downloadImage(imageId) {
 }
 
 // Function to send a WhatsApp template message for customer confirmation
-async function sendTemplateMessage(to, customerName) {
+async function sendTemplateMessage(to, customerName, plateNumber) {
     try {
-        console.log("Customer Name:", customerName);
+        console.log("Customer Name:", customerName, "Plate Number:", plateNumber);
         await axios.post(
             `https://graph.facebook.com/v23.0/${PHONE_NUMBER_ID}/messages`,
             {
@@ -81,14 +81,22 @@ async function sendTemplateMessage(to, customerName) {
                 to,
                 type: "template",
                 template: {
-                    name: "mechanic_oil_change_cta",
-                    language: { code: "en_US" },
+                    name: "car_oil_change_reward",
+                    language: { code: "en" },
                     components: [
                         {
                             type: "body",
                             parameters: [
                                 { type: "text", text: customerName },
-                                { type: "text", text: "petrolube" }
+                                { type: "text", text: plateNumber }
+                            ]
+                        },
+                        {
+                            type: "button",
+                            sub_type: "url",
+                            index: "0",
+                            parameters: [
+                                { type: "text", text: "spin-a-wheel" }
                             ]
                         }
                     ]

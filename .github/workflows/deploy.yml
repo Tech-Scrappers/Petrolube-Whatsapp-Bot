@@ -1,0 +1,29 @@
+name: Deploy Node.js App to EC2
+
+on:
+  push:
+    branches:
+      - main  # Trigger deploy on push to main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@15.185.175.159 << 'EOF'
+            cd ${{ secrets.APP_DIR }}
+            git pull origin main
+            npm install
+            pm2 restart all || pm2 start MechanicBot.js --name MechanicBot
+          EOF
+
