@@ -5,6 +5,7 @@ const mechanicWallets = new Map();
 const oilChangeLogs = new Map();
 const customerToLog = new Map(); // customerMobile -> logId
 const processedMessageIds = new Set(); // Deduplication for WhatsApp message IDs
+const inactivityTimers = new Map(); // sender -> timeout handle
 
 // Session management
 function getSession(sender) {
@@ -55,6 +56,27 @@ function markMessageProcessed(messageId) {
     processedMessageIds.add(messageId);
 }
 
+function setInactivityTimer(sender, callback, delayMs) {
+    clearInactivityTimer(sender);
+    const handle = setTimeout(() => {
+        inactivityTimers.delete(sender);
+        callback();
+    }, delayMs);
+    inactivityTimers.set(sender, handle);
+}
+
+function clearInactivityTimer(sender) {
+    const handle = inactivityTimers.get(sender);
+    if (handle) {
+        clearTimeout(handle);
+        inactivityTimers.delete(sender);
+    }
+}
+
+function hasInactivityTimer(sender) {
+    return inactivityTimers.has(sender);
+}
+
 module.exports = {
     getSession,
     setSession,
@@ -74,5 +96,9 @@ module.exports = {
     customerToLog,
     processedMessageIds,
     isMessageProcessed,
-    markMessageProcessed
+    markMessageProcessed,
+    inactivityTimers,
+    setInactivityTimer,
+    clearInactivityTimer,
+    hasInactivityTimer
 }; 

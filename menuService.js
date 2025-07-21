@@ -17,24 +17,24 @@ ${greeting}! 👋
 يرجى اختيار خيار:
 Please select an option:
 
-⿡ بدء تقديم تغيير الزيت
+1️⃣ بدء تقديم تغيير الزيت
    - تقديم تغيير زيت جديد مع رموز QR ورقم اللوحة
-⿡ Start Oil Change Submission
+1️⃣ Start Oil Change Submission
    - Submit new oil change with QR codes and plate number
 
-⿢ فحص رصيد المحفظة
+2️⃣ فحص رصيد المحفظة
    - عرض أرباحك الحالية
-⿢ Check Wallet Balance
+2️⃣ Check Wallet Balance
    - View your current earnings
 
-⿣ عرض المتصدرين
+3️⃣ عرض المتصدرين
    - عرض أفضل الميكانيكيين وترتيبك
-⿣ View Leaderboard
+3️⃣ View Leaderboard
    - See top mechanics and your ranking
 
-⿤ مساعدة
+4️⃣ مساعدة
    - الحصول على مساعدة في النظام
-⿤ Help
+4️⃣ Help
    - Get assistance with the system
 
 رد برقم (1-4) للمتابعة

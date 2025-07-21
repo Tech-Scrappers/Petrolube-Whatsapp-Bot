@@ -8,6 +8,17 @@ const { showMainMenu } = require('../menuService');
 
 const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
 
+// Add this near the top, after your imports
+const goMenuButton = [
+  {
+    type: 'reply',
+    reply: {
+      id: 'go_menu',
+      title: 'العودة للقائمة الرئيسية | Go Back to Menu'
+    }
+  }
+];
+
 // Webhook verification
 router.get('/webhook', (req, res) => {
     const mode = req.query["hub.mode"];
@@ -48,6 +59,10 @@ async function scanQRCodes(imageBuffer) {
 function generateSpinWheelLink(customerMobile, confirmationId) {
     return `https://your-domain.com/spin-wheel?mobile=${customerMobile}&confirmation=${confirmationId}`;
 }
+const INACTIVITY_REMINDER_MS = 5 * 60 * 1000; // 5 minutes
+const inactivityReminderText = `يبدو أنك لم تكمل العملية بعد. يمكنك المتابعة أو العودة للقائمة الرئيسية.
+It looks like you haven't finished your submission. You can continue or go back to the main menu.`;
+
 // Main webhook handler (POST)
 router.post('/webhook', (req, res) => {
     try {
@@ -68,6 +83,16 @@ router.post('/webhook', (req, res) => {
             try {
                 const sender = message.from;
                 let session = sessionManager.getSession(sender);
+                const resetInactivityTimer = () => {
+                    sessionManager.clearInactivityTimer(sender);
+                    if (session.state !== 'menu') {
+                        sessionManager.setInactivityTimer(sender, async () => {
+                            await sendMessage(sender, inactivityReminderText, goMenuButton);
+                        }, INACTIVITY_REMINDER_MS);
+                    }
+                };
+                resetInactivityTimer();
+
                 if (message.type === 'text') {
                     const text = message.text.body.toLowerCase().trim();
                     // Handle menu navigation
@@ -172,7 +197,7 @@ Rewards Earned: ${userMechanic.total_rewards} SAR\n\n`;
                                     leaderboardText += `🥈 قريب جداً! دفعة واحدة أخرى للوصول للقمة! 💪
 🥈 So close! Just one more push to reach the top!`;
                                 } else if (userMechanic.rank === 3) {
-                                    leaderboardText += `🥉 عمل رائع! استمر في الدفع للصعود أعلى! ��
+                                    leaderboardText += `🥉 عمل رائع! استمر في الدفع للصعود أعلى! 💪
 🥉 Great job! Keep pushing to climb higher!`;
                                 } else {
                                     leaderboardText += `استمر في الدفع! 💪 المكان الأول ينتظرك!
@@ -319,10 +344,6 @@ Please enter a valid mobile number:`);
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
                         }
-                    } else {
-                        await showMainMenu(sender);
-                        session.state = 'menu';
-                        sessionManager.setSession(sender, session);
                     }
                 } else if (message.type === 'image') {
                     const imageBuffer = await downloadImage(message.image.id);
