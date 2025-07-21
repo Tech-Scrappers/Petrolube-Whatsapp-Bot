@@ -14,7 +14,7 @@ const goMenuButton = [
     type: 'reply',
     reply: {
       id: 'go_menu',
-      title: 'العودة للقائمة الرئيسية | Go Back to Menu'
+      title: 'القائمة | Menu'
     }
   }
 ];
