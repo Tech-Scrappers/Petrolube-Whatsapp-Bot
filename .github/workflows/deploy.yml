@@ -3,7 +3,7 @@ name: Deploy Node.js App to EC2
 on:
   push:
     branches:
-      - main  # Trigger deploy on push to main
+      - main
 
 jobs:
   deploy:
@@ -18,12 +18,16 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Deploy to EC2
+      - name: Rsync updated code to EC2
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./ ec2-user@15.185.175.159:/home/ec2-user/Petrolube-Whatsapp-Bot
+
+      - name: Install & Restart app
         run: |
           ssh -o StrictHostKeyChecking=no ec2-user@15.185.175.159 << 'EOF'
-            cd ${{ secrets.APP_DIR }}
-            git pull origin main
+            cd /home/ec2-user/Petrolube-Whatsapp-Bot
             npm install
-            pm2 restart all || pm2 start MechanicBot.js --name MechanicBot
+            pm2 restart MechanicBot || pm2 start MechanicBot.js --name MechanicBot
           EOF
-
