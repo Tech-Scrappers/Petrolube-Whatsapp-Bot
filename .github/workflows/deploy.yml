@@ -24,15 +24,11 @@ jobs:
             -e "ssh -o StrictHostKeyChecking=no" \
             ./ ec2-user@15.185.175.159:/home/ec2-user/Petrolube-Whatsapp-Bot
 
-      - name: Install & Restart app
+      - name: Deploy, install, and restart on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ec2-user@15.185.175.159 << 'EOF'
             cd /home/ec2-user/Petrolube-Whatsapp-Bot
             npm install
-      - name: Upload .env to EC2
-        run: |
-          echo "${{ secrets.APP_ENV_FILE }}" | ssh -o StrictHostKeyChecking=no ec2-user@15.185.175.159 "cat > /home/ec2-user/Petrolube-Whatsapp-Bot/.env"
-
+            echo "${{ secrets.APP_ENV_FILE }}" > .env
             pm2 restart MechanicBot || pm2 start MechanicBot.js --name MechanicBot
-            
           EOF
