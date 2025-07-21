@@ -78,10 +78,12 @@ router.post('/webhook', (req, res) => {
                             session.data.mechanicName = mechanic.name;
                             session.data.mechanicNameAr = mechanic.nameAr;
                             session.state = 'qr_codes';
+                            sessionManager.setSession(sender, session);
                             await sendMessage(sender, `✅ تم التحقق من الميكانيكي: ${mechanic.nameAr}\n\n📸 يرجى إرسال صورة للأغطية الدائرية (رموز QR)\n\n*ملاحظة:* تأكد من أن جميع الأغطية الدائرية مرئية في الصورة\n\n---\n\n✅ Mechanic verified: ${mechanic.name}\n\n📸 Please send a photo of the circular foils (QR codes)\n\n*Note:* Make sure all circular foils are visible in the photo`);
                         } else {
                             await sendMessage(sender, "❌ لم يتم العثور على الميكانيكي\n\nيرجى الاتصال بالدعم\n\n+966501234567\n\n---\n\n❌ Mechanic not found\n\nPlease contact support\n\n+966501234567");
                             session.state = 'menu';
+                            sessionManager.setSession(sender, session);
                         }
                     } else if (text === '2' || text === 'wallet' || text === 'balance') {
                         const mechanic = await validateMechanicByPhone(sender);
@@ -97,6 +99,7 @@ router.post('/webhook', (req, res) => {
                             await sendMessage(sender, "❌ لم يتم العثور على الميكانيكي\n\nيرجى الاتصال بالدعم\n\n+966501234567\n\n---\n\n❌ Mechanic not found\n\nPlease contact support\n\n+966501234567");
                         }
                         session.state = 'menu';
+                        sessionManager.setSession(sender, session);
                     } else if (text === '3' || text === 'leaderboard' || text === 'rankings') {
                         const mechanic = await validateMechanicByPhone(sender);
                         if (mechanic) {
@@ -152,18 +155,22 @@ router.post('/webhook', (req, res) => {
                             await sendMessage(sender, "يرجى بدء تقديم تغيير زيت أولاً لعرض المتصدرين\n\n---\n\nPlease start an oil change submission first to view the leaderboard");
                         }
                         session.state = 'menu';
+                        sessionManager.setSession(sender, session);
                     } else if (text === '4' || text === 'help') {
                         const helpText = `🆘 *المساعدة والتعليمات*\n\n*كيفية تقديم تغيير زيت:*\n1. بدء تقديم تغيير الزيت\n2. إرسال صورة للأغطية الدائرية (رموز QR)\n3. إرسال صورة لوحة السيارة\n4. إدخال رقم هاتف العميل\n5. انتظار تأكيد العميل\n\n*المتطلبات:*\n• صورة واضحة للأغطية الدائرية\n• صورة واضحة للوحة السيارة\n• رقم هاتف عميل صحيح\n\n*المكافآت:*\n• 4 ريال لكل تغيير زيت مؤكد\n• رصيد فوري في المحفظة بعد موافقة العميل\n\nللدعم الفني: support@example.com\n\n---\n\n🆘 *Help & Instructions*\n\n*How to submit an oil change:*\n1. Start oil change submission\n2. Send photo of circular foils (QR codes)\n3. Send photo of car number plate\n4. Enter customer mobile number\n5. Wait for customer confirmation\n\n*Requirements:*\n• Clear photo of circular foils\n• Clear photo of number plate\n• Valid customer mobile number\n\n*Rewards:*\n• 4 SAR per confirmed oil change\n• Instant wallet credit after customer approval\n\nFor technical support: support@example.com`;
                         await sendMessage(sender, helpText);
                         session.state = 'menu';
+                        sessionManager.setSession(sender, session);
                     } else if (text === 'menu' || text === 'main' || text === 'home') {
                         session.state = 'menu';
+                        sessionManager.setSession(sender, session);
                         await showMainMenu(sender);
                     } else if (session.state === 'customer_mobile') {
                         const mobileNumber = text.replace(/\D/g, '');
                         if (mobileNumber.length >= 10) {
                             session.data.customerMobile = mobileNumber;
                             session.state = 'customer_name';
+                            sessionManager.setSession(sender, session);
                             await sendMessage(sender, `👤 يرجى إدخال اسم العميل:\n\n---\n\n👤 Please enter the customer's name:`);
                         } else {
                             await sendMessage(sender, "❌ رقم هاتف غير صحيح\n\nيرجى إدخال رقم هاتف صحيح:\n\n---\n\n❌ Invalid mobile number\n\nPlease enter a valid mobile number:");
@@ -171,6 +178,7 @@ router.post('/webhook', (req, res) => {
                     } else if (session.state === 'customer_name') {
                         const customerName = message.text.body.trim();
                         session.data.customerName = customerName;
+                        sessionManager.setSession(sender, session);
                         const validation = await validateCustomer(session.data.customerMobile, session.data.plateNumber);
                         try {
                             const apiBody = {
@@ -226,6 +234,7 @@ router.post('/webhook', (req, res) => {
                                 const errorMsg = (apiResponse.data && apiResponse.data.message) ? apiResponse.data.message : '❌ فشل في تقديم تغيير الزيت. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.\n\n---\n\n❌ Oil change submission failed. Please try again or contact support.';
                                 await sendMessage(sender, errorMsg);
                                 session.state = 'menu';
+                                sessionManager.setSession(sender, session);
                             }
                         } catch (apiError) {
                             let errorMsg = '❌ فشل في تقديم تغيير الزيت. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.\n\n---\n\n❌ Oil change submission failed. Please try again or contact support.';
@@ -236,10 +245,12 @@ router.post('/webhook', (req, res) => {
                             }
                             await sendMessage(sender, errorMsg);
                             session.state = 'menu';
+                            sessionManager.setSession(sender, session);
                         }
                     } else {
                         await showMainMenu(sender);
                         session.state = 'menu';
+                        sessionManager.setSession(sender, session);
                     }
                 } else if (message.type === 'image') {
                     const imageBuffer = await downloadImage(message.image.id);
@@ -276,6 +287,7 @@ router.post('/webhook', (req, res) => {
                             session.data.foilCount = foilCount;
                             session.data.qrCodesMissing = qrCodesMissing;
                             session.state = 'number_plate';
+                            sessionManager.setSession(sender, session);
                             let responseText = `📸 *تم مسح رموز QR*\n\n`;
                             responseText += `الأغطية الدائرية المكتشفة: ${foilCount}\n`;
                             responseText += `تم العثور على ${qrCodes.length} رموز QR:\n`;
@@ -296,6 +308,7 @@ router.post('/webhook', (req, res) => {
                         if (plateNumber) {
                             session.data.plateNumber = plateNumber;
                             session.state = 'customer_mobile';
+                            sessionManager.setSession(sender, session);
                             await sendMessage(sender, `🚗 *تم اكتشاف لوحة السيارة*\n\nرقم اللوحة: ${plateNumber}\n\n📱 يرجى إدخال رقم هاتف العميل:\n\n---\n\n🚗 *Number Plate Detected*\n\nPlate Number: ${plateNumber}\n\n📱 Please enter the customer's mobile number:`);
                         } else {
                             await sendMessage(sender, "❌ لم يتم اكتشاف لوحة السيارة\n\nيرجى التأكد من أن اللوحة مرئية بوضوح والمحاولة مرة أخرى\n\n---\n\n❌ Could not detect the number plate\n\nPlease ensure the plate is clearly visible and try again");
@@ -303,6 +316,7 @@ router.post('/webhook', (req, res) => {
                     } else {
                         await sendMessage(sender, "يرجى اتباع عملية التقديم\n\nاكتب 'menu' للبدء من جديد\n\n---\n\nPlease follow the submission process\n\nType 'menu' to start over");
                         session.state = 'menu';
+                        sessionManager.setSession(sender, session);
                     }
                 } else if (message.type === 'interactive' && message.interactive?.type === 'button_reply') {
                     const buttonId = message.interactive.button_reply.id;
