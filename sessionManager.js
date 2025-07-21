@@ -4,6 +4,7 @@ const customerConfirmations = new Map();
 const mechanicWallets = new Map();
 const oilChangeLogs = new Map();
 const customerToLog = new Map(); // customerMobile -> logId
+const processedMessageIds = new Set(); // Deduplication for WhatsApp message IDs
 
 // Session management
 function getSession(sender) {
@@ -46,6 +47,14 @@ function getCustomerToLog(customerMobile) {
     return customerToLog.get(customerMobile);
 }
 
+function isMessageProcessed(messageId) {
+    return processedMessageIds.has(messageId);
+}
+
+function markMessageProcessed(messageId) {
+    processedMessageIds.add(messageId);
+}
+
 module.exports = {
     getSession,
     setSession,
@@ -62,5 +71,8 @@ module.exports = {
     customerConfirmations,
     mechanicWallets,
     oilChangeLogs,
-    customerToLog
+    customerToLog,
+    processedMessageIds,
+    isMessageProcessed,
+    markMessageProcessed
 }; 
