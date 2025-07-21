@@ -79,9 +79,21 @@ router.post('/webhook', (req, res) => {
                             session.data.mechanicNameAr = mechanic.nameAr;
                             session.state = 'qr_codes';
                             sessionManager.setSession(sender, session);
-                            await sendMessage(sender, `✅ تم التحقق من الميكانيكي: ${mechanic.nameAr}\n\n📸 يرجى إرسال صورة للأغطية الدائرية (رموز QR)\n\n*ملاحظة:* تأكد من أن جميع الأغطية الدائرية مرئية في الصورة\n\n---\n\n✅ Mechanic verified: ${mechanic.name}\n\n📸 Please send a photo of the circular foils (QR codes)\n\n*Note:* Make sure all circular foils are visible in the photo`);
+                            await sendMessage(sender, `✅ تم التحقق من الميكانيكي: ${mechanic.nameAr}
+✅ Mechanic verified: ${mechanic.name}
+
+📸 يرجى إرسال صورة للأغطية الدائرية (رموز QR)
+📸 Please send a photo of the circular foils (QR codes)
+
+*ملاحظة:* تأكد من أن جميع الأغطية الدائرية مرئية في الصورة
+*Note:* Make sure all circular foils are visible in the photo`);
                         } else {
-                            await sendMessage(sender, "❌ لم يتم العثور على الميكانيكي\n\nيرجى الاتصال بالدعم\n\n+966501234567\n\n---\n\n❌ Mechanic not found\n\nPlease contact support\n\n+966501234567");
+                            await sendMessage(sender, `❌ لم يتم العثور على الميكانيكي
+❌ Mechanic not found
+
+يرجى الاتصال بالدعم
+Please contact support
++966501234567`);
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
                         }
@@ -91,12 +103,28 @@ router.post('/webhook', (req, res) => {
                             const walletData = await fetchMechanicWallet(mechanic.id);
                             if (walletData && walletData.data) {
                                 const balance = walletData.data.balance;
-                                await sendMessage(sender, `💰 *رصيد المحفظة*\n\nالرصيد الحالي: ${balance} ريال\n\nلبدء الربح، ابدأ بتقديم تغيير زيت\n\n---\n\n💰 *Wallet Balance*\n\nCurrent Balance: ${balance} SAR\n\nTo start earning, begin an oil change submission`);
+                                await sendMessage(sender, `💰 رصيد المحفظة
+💰 Wallet Balance
+
+الرصيد الحالي: ${balance} ريال
+Current Balance: ${balance} SAR
+
+لبدء الربح، ابدأ بتقديم تغيير زيت
+To start earning, begin an oil change submission`);
                             } else {
-                                await sendMessage(sender, "💰 *رصيد المحفظة*\n\nتعذر جلب بيانات المحفظة. يرجى المحاولة مرة أخرى لاحقاً.\n\n---\n\n💰 *Wallet Balance*\n\nUnable to fetch wallet data. Please try again later.");
+                                await sendMessage(sender, `💰 رصيد المحفظة
+💰 Wallet Balance
+
+تعذر جلب بيانات المحفظة. يرجى المحاولة مرة أخرى لاحقاً.
+Unable to fetch wallet data. Please try again later.`);
                             }
                         } else {
-                            await sendMessage(sender, "❌ لم يتم العثور على الميكانيكي\n\nيرجى الاتصال بالدعم\n\n+966501234567\n\n---\n\n❌ Mechanic not found\n\nPlease contact support\n\n+966501234567");
+                            await sendMessage(sender, `❌ لم يتم العثور على الميكانيكي
+❌ Mechanic not found
+
+يرجى الاتصال بالدعم
+Please contact support
++966501234567`);
                         }
                         session.state = 'menu';
                         sessionManager.setSession(sender, session);
@@ -106,59 +134,99 @@ router.post('/webhook', (req, res) => {
                             const leaderboardData = await fetchLeaderboard(mechanic.id);
                             if (leaderboardData) {
                                 const { mechanic: userMechanic, top_mechanics, neighbors } = leaderboardData;
-                                
-                                let leaderboardText = `🏆 *Petrolube Leaderboard* 🛠️\n\n`;
-                                
-                                // Your Stats Section
-                                leaderboardText += `*إحصائياتك / Your Stats:*\n`;
-                                leaderboardText += `👨‍🔧 ترتيبك / Your Rank: ${userMechanic.rank}\n`;
-                                leaderboardText += `🔧 تغييرات الزيت / Oil Changes: ${userMechanic.oil_changes}\n`;
-                                leaderboardText += `💰 المكافآت المكتسبة / Rewards Earned: ${userMechanic.total_rewards} SAR\n\n`;
-                                
-                                // Top 3 Mechanics Section
-                                leaderboardText += `🔥 *أفضل 3 ميكانيكيين / Top 3 Mechanics:*\n`;
+                                let leaderboardText = `🏆 لوحة المتصدرين
+🏆 Petrolube Leaderboard 🛠️\n\n`;
+                                leaderboardText += `إحصائياتك:
+Your Stats:
+👨‍🔧 ترتيبك: ${userMechanic.rank}
+Your Rank: ${userMechanic.rank}
+🔧 تغييرات الزيت: ${userMechanic.oil_changes}
+Oil Changes: ${userMechanic.oil_changes}
+💰 المكافآت المكتسبة: ${userMechanic.total_rewards} ريال
+Rewards Earned: ${userMechanic.total_rewards} SAR\n\n`;
+                                leaderboardText += `🔥 أفضل 3 ميكانيكيين
+🔥 Top 3 Mechanics:
+`;
                                 top_mechanics.forEach(mech => {
                                     const rankBadge = `[${mech.rank}]`;
                                     const rewards = mech.total_rewards ? `(${mech.total_rewards} SAR)` : '';
                                     const displayName = mech.rank === userMechanic.rank ? `*${mech.name} (You)*` : mech.name;
-                                    leaderboardText += `${rankBadge} ${displayName} — ${mech.oil_changes} oil changes ${rewards}\n`;
+                                    leaderboardText += `${rankBadge} ${displayName} — ${mech.oil_changes} تغييرات زيت / oil changes ${rewards}\n`;
                                 });
                                 leaderboardText += `\n`;
-                                
-                                // Nearby Ranks Section (only show if not in top 3)
                                 if (userMechanic.rank > 3) {
-                                    leaderboardText += `📊 *الترتيبات القريبة / Nearby Ranks:*\n`;
+                                    leaderboardText += `📊 الترتيبات القريبة
+📊 Nearby Ranks:
+`;
                                     neighbors.forEach(mech => {
                                         const rankBadge = `[${mech.rank}]`;
                                         const displayName = mech.rank === userMechanic.rank ? `*${mech.name} (You)*` : mech.name;
-                                        leaderboardText += `${rankBadge} ${displayName} — ${mech.oil_changes} changes\n`;
+                                        leaderboardText += `${rankBadge} ${displayName} — ${mech.oil_changes} تغييرات زيت / oil changes\n`;
                                     });
                                     leaderboardText += `\n`;
                                 }
-                                
-                                // Footer Message based on rank
                                 if (userMechanic.rank === 1) {
-                                    leaderboardText += `🏆 *أنت البطل!* استمر في التميز! 👑 / You're the Champion! Keep dominating!`;
+                                    leaderboardText += `🏆 أنت البطل! استمر في التميز! 👑
+🏆 You're the Champion! Keep dominating!`;
                                 } else if (userMechanic.rank === 2) {
-                                    leaderboardText += `🥈 *قريب جداً!* دفعة واحدة أخرى للوصول للقمة! 💪 / So close! Just one more push to reach the top!`;
+                                    leaderboardText += `🥈 قريب جداً! دفعة واحدة أخرى للوصول للقمة! 💪
+🥈 So close! Just one more push to reach the top!`;
                                 } else if (userMechanic.rank === 3) {
-                                    leaderboardText += `🥉 *عمل رائع!* استمر في الدفع للصعود أعلى! 🔥 / Great job! Keep pushing to climb higher!`;
+                                    leaderboardText += `🥉 عمل رائع! استمر في الدفع للصعود أعلى! ��
+🥉 Great job! Keep pushing to climb higher!`;
                                 } else {
-                                    leaderboardText += `استمر في الدفع! 💪 المكان الأول ينتظرك! / Keep pushing! The top spot awaits!`;
+                                    leaderboardText += `استمر في الدفع! 💪 المكان الأول ينتظرك!
+Keep pushing! The top spot awaits!`;
                                 }
-                                
                                 await sendMessage(sender, leaderboardText);
                             } else {
-                                await sendMessage(sender, "❌ تعذر جلب بيانات المتصدرين. يرجى المحاولة مرة أخرى لاحقاً.\n\n---\n\n❌ Unable to fetch leaderboard data. Please try again later.");
+                                await sendMessage(sender, `❌ تعذر جلب بيانات المتصدرين
+❌ Unable to fetch leaderboard data
+يرجى المحاولة مرة أخرى لاحقاً.
+Please try again later.`);
                             }
                         } else {
-                            await sendMessage(sender, "يرجى بدء تقديم تغيير زيت أولاً لعرض المتصدرين\n\n---\n\nPlease start an oil change submission first to view the leaderboard");
+                            await sendMessage(sender, `يرجى بدء تقديم تغيير زيت أولاً لعرض المتصدرين
+Please start an oil change submission first to view the leaderboard`);
                         }
                         session.state = 'menu';
                         sessionManager.setSession(sender, session);
                     } else if (text === '4' || text === 'help') {
-                        const helpText = `🆘 *المساعدة والتعليمات*\n\n*كيفية تقديم تغيير زيت:*\n1. بدء تقديم تغيير الزيت\n2. إرسال صورة للأغطية الدائرية (رموز QR)\n3. إرسال صورة لوحة السيارة\n4. إدخال رقم هاتف العميل\n5. انتظار تأكيد العميل\n\n*المتطلبات:*\n• صورة واضحة للأغطية الدائرية\n• صورة واضحة للوحة السيارة\n• رقم هاتف عميل صحيح\n\n*المكافآت:*\n• 4 ريال لكل تغيير زيت مؤكد\n• رصيد فوري في المحفظة بعد موافقة العميل\n\nللدعم الفني: support@example.com\n\n---\n\n🆘 *Help & Instructions*\n\n*How to submit an oil change:*\n1. Start oil change submission\n2. Send photo of circular foils (QR codes)\n3. Send photo of car number plate\n4. Enter customer mobile number\n5. Wait for customer confirmation\n\n*Requirements:*\n• Clear photo of circular foils\n• Clear photo of number plate\n• Valid customer mobile number\n\n*Rewards:*\n• 4 SAR per confirmed oil change\n• Instant wallet credit after customer approval\n\nFor technical support: support@example.com`;
-                        await sendMessage(sender, helpText);
+                        const helpText = `🆘 المساعدة والتعليمات
+🆘 Help & Instructions
+
+كيفية تقديم تغيير زيت:
+How to submit an oil change:
+1. بدء تقديم تغيير الزيت
+1. Start oil change submission
+2. إرسال صورة للأغطية الدائرية (رموز QR)
+2. Send photo of circular foils (QR codes)
+3. إرسال صورة لوحة السيارة
+3. Send photo of car number plate
+4. إدخال رقم هاتف العميل
+4. Enter customer mobile number
+5. انتظار تأكيد العميل
+5. Wait for customer confirmation
+
+المتطلبات:
+Requirements:
+• صورة واضحة للأغطية الدائرية
+• Clear photo of circular foils
+• صورة واضحة للوحة السيارة
+• Clear photo of number plate
+• رقم هاتف عميل صحيح
+• Valid customer mobile number
+
+المكافآت:
+Rewards:
+• 4 ريال لكل تغيير زيت مؤكد
+• 4 SAR per confirmed oil change
+• رصيد فوري في المحفظة بعد موافقة العميل
+• Instant wallet credit after customer approval
+
+للدعم الفني: support@example.com
+For technical support: support@example.com`;
+                        await sendMessage(sender, helpText, goMenuButton);
                         session.state = 'menu';
                         sessionManager.setSession(sender, session);
                     } else if (text === 'menu' || text === 'main' || text === 'home') {
@@ -171,9 +239,13 @@ router.post('/webhook', (req, res) => {
                             session.data.customerMobile = mobileNumber;
                             session.state = 'customer_name';
                             sessionManager.setSession(sender, session);
-                            await sendMessage(sender, `👤 يرجى إدخال اسم العميل:\n\n---\n\n👤 Please enter the customer's name:`);
+                            await sendMessage(sender, `👤 يرجى إدخال اسم العميل:
+👤 Please enter the customer's name:`);
                         } else {
-                            await sendMessage(sender, "❌ رقم هاتف غير صحيح\n\nيرجى إدخال رقم هاتف صحيح:\n\n---\n\n❌ Invalid mobile number\n\nPlease enter a valid mobile number:");
+                            await sendMessage(sender, `❌ رقم هاتف غير صحيح
+❌ Invalid mobile number
+يرجى إدخال رقم هاتف صحيح:
+Please enter a valid mobile number:`);
                         }
                     } else if (session.state === 'customer_name') {
                         const customerName = message.text.body.trim();
@@ -232,7 +304,7 @@ router.post('/webhook', (req, res) => {
                                 session.state = 'waiting_confirmation';
                             } else {
                                 const errorMsg = (apiResponse.data && apiResponse.data.message) ? apiResponse.data.message : '❌ فشل في تقديم تغيير الزيت. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.\n\n---\n\n❌ Oil change submission failed. Please try again or contact support.';
-                                await sendMessage(sender, errorMsg);
+                                await sendMessage(sender, errorMsg, goMenuButton);
                                 session.state = 'menu';
                                 sessionManager.setSession(sender, session);
                             }
@@ -243,7 +315,7 @@ router.post('/webhook', (req, res) => {
                             } else if (apiError.message) {
                                 errorMsg = apiError.message;
                             }
-                            await sendMessage(sender, errorMsg);
+                            await sendMessage(sender, errorMsg, goMenuButton);
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
                         }
@@ -256,9 +328,15 @@ router.post('/webhook', (req, res) => {
                     const imageBuffer = await downloadImage(message.image.id);
                     if (session.state === 'qr_codes') {
                         const foilCount = await detectNumberOfFoils(imageBuffer);
-                        // New requirement: minimum 4 foils
                         if (foilCount < 3) {
-                            await sendMessage(sender, `❌ يجب أن تكون هناك 4 أغطية دائرية على الأقل في الصورة\n\nالأغطية المكتشفة: ${foilCount}\n\nيرجى إعادة التقاط الصورة والتأكد من أن هناك 4 أغطية دائرية على الأقل مرئية بوضوح\n\n---\n\n❌ At least 4 foils must be visible in the image.\n\nDetected foils: ${foilCount}\n\nPlease retake the photo and ensure at least 4 foils are clearly visible.`);
+                            await sendMessage(sender, `❌ يجب أن تكون هناك 4 أغطية دائرية على الأقل في الصورة
+❌ At least 4 foils must be visible in the image.
+
+الأغطية المكتشفة: ${foilCount}
+Detected foils: ${foilCount}
+
+يرجى إعادة التقاط الصورة والتأكد من أن هناك 4 أغطية دائرية على الأقل مرئية بوضوح
+Please retake the photo and ensure at least 4 foils are clearly visible.`);
                             return;
                         }
                         const qrResult = await scanQRCodes(imageBuffer);
@@ -278,7 +356,16 @@ router.post('/webhook', (req, res) => {
                             qrCodesMissing = true;
                         }
                         if (!qrOk) {
-                            await sendMessage(sender, `❌ لم يتم اكتشاف رموز QR كافية لعدد الأغطية.\n\nالأغطية المكتشفة: ${foilCount}\nرموز QR المكتشفة: ${qrCodes.length}\n\nيرجى إعادة التقاط الصورة والتأكد من أن جميع رموز QR مرئية على الأغطية الدائرية\n\n---\n\n❌ Not enough QR codes detected for the number of foils.\n\nDetected foils: ${foilCount}\nDetected QR codes: ${qrCodes.length}\n\nPlease retake the photo and ensure all QR codes are visible on the foils.`);
+                            await sendMessage(sender, `❌ لم يتم اكتشاف رموز QR كافية لعدد الأغطية.
+❌ Not enough QR codes detected for the number of foils.
+
+الأغطية المكتشفة: ${foilCount}
+Detected foils: ${foilCount}
+رموز QR المكتشفة: ${qrCodes.length}
+Detected QR codes: ${qrCodes.length}
+
+يرجى إعادة التقاط الصورة والتأكد من أن جميع رموز QR مرئية على الأغطية الدائرية
+Please retake the photo and ensure all QR codes are visible on the foils.`);
                             return;
                         }
                         if (qrCodes.length > 0) {
@@ -288,20 +375,26 @@ router.post('/webhook', (req, res) => {
                             session.data.qrCodesMissing = qrCodesMissing;
                             session.state = 'number_plate';
                             sessionManager.setSession(sender, session);
-                            let responseText = `📸 *تم مسح رموز QR*\n\n`;
-                            responseText += `الأغطية الدائرية المكتشفة: ${foilCount}\n`;
-                            responseText += `تم العثور على ${qrCodes.length} رموز QR:\n`;
+                            let responseText = `📸 تم مسح رموز QR
+📸 QR Codes Scanned
+
+الأغطية الدائرية المكتشفة: ${foilCount}
+Detected Foils: ${foilCount}
+تم العثور على ${qrCodes.length} رموز QR:
+Found ${qrCodes.length} QR codes:
+`;
                             qrCodes.forEach((code, index) => {
                                 responseText += `${index + 1}. ${code}\n`;
                             });
-                            responseText += `\n${qrValidation.message}\n\n📸 الآن يرجى إرسال صورة لوحة السيارة\n\n---\n\n📸 *QR Codes Scanned*\n\nDetected Foils: ${foilCount}\nFound ${qrCodes.length} QR codes:\n`;
-                            qrCodes.forEach((code, index) => {
-                                responseText += `${index + 1}. ${code}\n`;
-                            });
-                            responseText += `\n${qrValidation.message}\n\n📸 Now please send a photo of the car's number plate`;
-                            await sendMessage(sender, responseText);
+                            responseText += `\n${qrValidation.message}\n\n📸 الآن يرجى إرسال صورة لوحة السيارة
+📸 Now please send a photo of the car's number plate`;
+                            await sendMessage(sender, responseText, goMenuButton);
                         } else {
-                            await sendMessage(sender, "❌ لم يتم اكتشاف رموز QR\n\nيرجى التأكد من أن جميع الأغطية الدائرية مرئية بوضوح والمحاولة مرة أخرى\n\n---\n\n❌ No QR codes detected\n\nPlease ensure all circular foils are clearly visible and try again");
+                            await sendMessage(sender, `❌ لم يتم اكتشاف رموز QR
+❌ No QR codes detected
+
+يرجى التأكد من أن جميع الأغطية الدائرية مرئية بوضوح والمحاولة مرة أخرى
+Please ensure all circular foils are clearly visible and try again`, goMenuButton);
                         }
                     } else if (session.state === 'number_plate') {
                         const plateNumber = await extractNumberPlate(imageBuffer);
@@ -309,12 +402,27 @@ router.post('/webhook', (req, res) => {
                             session.data.plateNumber = plateNumber;
                             session.state = 'customer_mobile';
                             sessionManager.setSession(sender, session);
-                            await sendMessage(sender, `🚗 *تم اكتشاف لوحة السيارة*\n\nرقم اللوحة: ${plateNumber}\n\n📱 يرجى إدخال رقم هاتف العميل:\n\n---\n\n🚗 *Number Plate Detected*\n\nPlate Number: ${plateNumber}\n\n📱 Please enter the customer's mobile number:`);
+                            await sendMessage(sender, `🚗 تم اكتشاف لوحة السيارة
+🚗 Number Plate Detected
+
+رقم اللوحة: ${plateNumber}
+Plate Number: ${plateNumber}
+
+📱 يرجى إدخال رقم هاتف العميل:
+📱 Please enter the customer's mobile number:`, goMenuButton);
                         } else {
-                            await sendMessage(sender, "❌ لم يتم اكتشاف لوحة السيارة\n\nيرجى التأكد من أن اللوحة مرئية بوضوح والمحاولة مرة أخرى\n\n---\n\n❌ Could not detect the number plate\n\nPlease ensure the plate is clearly visible and try again");
+                            await sendMessage(sender, `❌ لم يتم اكتشاف لوحة السيارة
+❌ Could not detect the number plate
+
+يرجى التأكد من أن اللوحة مرئية بوضوح والمحاولة مرة أخرى
+Please ensure the plate is clearly visible and try again`, goMenuButton);
                         }
                     } else {
-                        await sendMessage(sender, "يرجى اتباع عملية التقديم\n\nاكتب 'menu' للبدء من جديد\n\n---\n\nPlease follow the submission process\n\nType 'menu' to start over");
+                        await sendMessage(sender, `يرجى اتباع عملية التقديم
+Please follow the submission process
+
+اكتب 'menu' للبدء من جديد
+Type 'menu' to start over`, goMenuButton);
                         session.state = 'menu';
                         sessionManager.setSession(sender, session);
                     }
@@ -333,6 +441,11 @@ router.post('/webhook', (req, res) => {
                         }
                     } else if (buttonId === 'dispute') {
                         await sendMessage(customerMobile, `❌ *تم تقديم النزاع*\n\nتم تسجيل نزاع تغيير الزيت الخاص بك\n\nسيتصل بك فريقنا خلال 24 ساعة لحل هذه المشكلة\n\nللمساعدة الفورية: 920000000\n\n---\n\n❌ *Dispute Filed*\n\nYour oil change dispute has been recorded\n\nOur team will contact you within 24 hours to resolve this issue\n\nFor immediate assistance: 920000000`);
+                    } else if (buttonId === 'go_menu') {
+                        session.state = 'menu';
+                        sessionManager.setSession(sender, session);
+                        await showMainMenu(sender);
+                        return;
                     }
                 }
             } catch (error) {
