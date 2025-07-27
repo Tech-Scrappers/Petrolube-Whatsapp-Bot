@@ -55,15 +55,15 @@ router.post('/send-shop-registration-message', async (req, res) => {
 
 // Endpoint to send mechanic registration template message
 router.post('/send-mechanic-registration-message', async (req, res) => {
-  const { mechanic_number, mechanic_name, shop_name } = req.body;
-  if (!mechanic_number || !mechanic_name || !shop_name) {
-    return res.status(400).json({ error: 'Missing required fields: mechanic_number, mechanic_name, shop_name' });
+  const { full_name, mobile_number, shop_name } = req.body;
+  if (!full_name || !mobile_number || !shop_name) {
+    return res.status(400).json({ error: 'Missing required fields: full_name, mobile_number, shop_name' });
   }
   try {
     await sendTemplateMessageByName(
-      mechanic_number,
+      mobile_number,
       'mechanic_onboarding',
-      [mechanic_name, shop_name]
+      [full_name, shop_name]
     );
     res.status(200).json({ success: true, message: 'Mechanic registration message sent.' });
   } catch (error) {
