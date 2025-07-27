@@ -596,9 +596,18 @@ Type 'menu' to start over`, goMenuButton);
                                     console.log('📱 Sending reward message to mechanic:', mechanicPhoneNumber);
                                     await sendMessage(mechanicPhoneNumber, `💰 *تم الحصول على المكافأة!*\n\nتم تأكيد تغيير الزيت من قبل العميل\n\n✅ تم إضافة 4 ريال إلى محفظتك\n\nلفحص رصيد المحفظة، اكتب "2" أو "wallet"\n\n---\n\n💰 *Reward Earned!*\n\nOil change confirmed by customer.\n\n✅ +4 SAR added to your wallet\n\nTo check wallet balance, type "2" or "wallet"`, goMenuButton);
                                     
-                                    // Send confirmation message to customer with spin URL
+                                    // Send confirmation message to customer with spin URL (handle null case)
+                                    const spinUrl = responseData.spin_url;
                                     console.log('📱 Sending confirmation message to customer:', customerMobile);
-                                    await sendMessage(customerMobile, `✅ *تم تأكيد تغيير الزيت!*\n\nشكراً لك على التأكيد!\n\n🎰 انقر هنا لتدوير عجلة المكافآت:\n${spinUrl}\n\n---\n\n✅ *Oil Change Confirmed!*\n\nThank you for confirming!\n\n🎰 Click here to spin the reward wheel:\n${spinUrl}`);
+                                    
+                                    let customerMessage;
+                                    if (spinUrl) {
+                                        customerMessage = `✅ *تم تأكيد تغيير الزيت!*\n\nشكراً لك على التأكيد!\n\n🎰 انقر هنا لتدوير عجلة المكافآت:\n${spinUrl}\n\n---\n\n✅ *Oil Change Confirmed!*\n\nThank you for confirming!\n\n🎰 Click here to spin the reward wheel:\n${spinUrl}`;
+                                    } else {
+                                        customerMessage = `✅ *تم تأكيد تغيير الزيت!*\n\nشكراً لك على التأكيد!\n\nسيتم إرسال رابط عجلة المكافآت قريباً.\n\n---\n\n✅ *Oil Change Confirmed!*\n\nThank you for confirming!\n\nThe reward wheel link will be sent shortly.`;
+                                    }
+                                    
+                                    await sendMessage(customerMobile, customerMessage);
                                     console.log('✅ All messages sent successfully');
                                 }
                             } catch (error) {
