@@ -1,4 +1,5 @@
 const axios = require('axios');
+const FormData = require('form-data');
 require('dotenv').config();
 
 const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL;
@@ -35,15 +36,43 @@ async function validateMechanicByPhone(phoneNumber) {
     }
 }
 
-// Validate QR codes (dummy for now)
+// Validate QR codes (real API call)
 async function validateQRCodes(qrCodes) {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return {
-        valid: qrCodes,
-        invalid: [],
-        isValid: true,
-        message: `✅ ${qrCodes.length} QR codes scanned successfully / تم مسح ${qrCodes.length} رموز QR بنجاح`
-    };
+    try {
+        const response = await axios.post(
+            `${EXTERNAL_API_BASE_URL}/bot/validate-qr-codes`,
+            { qr_codes: qrCodes },
+            {
+                headers: {
+                    'X-Petrolube-Secret-Key': process.env.PETROLUBE_SECRET_KEY,
+                    'Content-Type': 'application/json'
+                },
+                validateStatus: () => true // allow handling all status codes manually
+            }
+        );
+        if (response.status === 204) {
+            return { isValid: true, message: '✅ رموز QR صالحة وغير مكررة\n✅ QR codes are valid and not duplicated.' };
+        } else if (response.status === 422) {
+            let msg = '❌ رموز QR مكررة\n❌ Duplicate QR codes.';
+            if (response.data && response.data.message) msg = response.data.message;
+            return { isValid: false, message: msg };
+        } else {
+            let msg = '❌ حدث خطأ أثناء التحقق من رموز QR\n❌ Error validating QR codes.';
+            if (response.data && response.data.message) msg = response.data.message;
+            return { isValid: false, message: msg };
+        }
+    } catch (error) {
+        let message = '❌ QR code validation failed. Please try again or contact support.';
+        if (error.response && error.response.data && error.response.data.message) {
+            message = error.response.data.message;
+        } else if (error.message) {
+            message = error.message;
+        }
+        return {
+            isValid: false,
+            message
+        };
+    }
 }
 
 // Validate customer (dummy for now)
@@ -108,6 +137,86 @@ async function fetchMechanicWallet(mechanicId) {
     }
 }
 
+// Validate car plate (duplication check)
+async function validateCarPlate(carPlateNumber) {
+    try {
+        const response = await axios.post(
+            `${EXTERNAL_API_BASE_URL}/bot/validate-car-plate`,
+            { car_plate_number: carPlateNumber },
+            {
+                headers: {
+                    'X-Petrolube-Secret-Key': process.env.PETROLUBE_SECRET_KEY,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                validateStatus: () => true // allow handling all status codes manually
+            }
+        );
+        if (response.status === 204) {
+            return { isValid: true, message: '✅ رقم اللوحة صالح وغير مكرر\n✅ Plate number is valid and not duplicated.' };
+        } else if (response.status === 422) {
+            let msg = '❌ رقم اللوحة مكرر\n❌ Duplicate plate number.';
+            if (response.data && response.data.message) msg = response.data.message;
+            return { isValid: false, message: msg };
+        } else {
+            let msg = '❌ حدث خطأ أثناء التحقق من رقم اللوحة\n❌ Error validating plate number.';
+            if (response.data && response.data.message) msg = response.data.message;
+            return { isValid: false, message: msg };
+        }
+    } catch (error) {
+        let message = '❌ Car plate validation failed. Please try again or contact support.';
+        if (error.response && error.response.data && error.response.data.message) {
+            message = error.response.data.message;
+        } else if (error.message) {
+            message = error.message;
+        }
+        return {
+            isValid: false,
+            message
+        };
+    }
+}
+
+// Validate customer phone (duplication check)
+async function validateCustomerPhone(customerPhone) {
+    try {
+        const response = await axios.post(
+            `${EXTERNAL_API_BASE_URL}/bot/validate-customer-phone`,
+            { customer_phone: customerPhone },
+            {
+                headers: {
+                    'X-Petrolube-Secret-Key': process.env.PETROLUBE_SECRET_KEY,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                validateStatus: () => true // allow handling all status codes manually
+            }
+        );
+        if (response.status === 204) {
+            return { isValid: true, message: '✅ رقم الهاتف صالح وغير مكرر\n✅ Customer phone is valid and not duplicated.' };
+        } else if (response.status === 422) {
+            let msg = '❌ رقم الهاتف مكرر\n❌ Duplicate customer phone.';
+            if (response.data && response.data.message) msg = response.data.message;
+            return { isValid: false, message: msg };
+        } else {
+            let msg = '❌ حدث خطأ أثناء التحقق من رقم الهاتف\n❌ Error validating customer phone.';
+            if (response.data && response.data.message) msg = response.data.message;
+            return { isValid: false, message: msg };
+        }
+    } catch (error) {
+        let message = '❌ Customer phone validation failed. Please try again or contact support.';
+        if (error.response && error.response.data && error.response.data.message) {
+            message = error.response.data.message;
+        } else if (error.message) {
+            message = error.message;
+        }
+        return {
+            isValid: false,
+            message
+        };
+    }
+}
+
 module.exports = {
     validateMechanicByPhone,
     validateQRCodes,
@@ -121,5 +230,7 @@ module.exports = {
     PHONE_NUMBER_ID,
     OPENAI_API_KEY,
     PYTHON_QR_API_URL,
-    EXTERNAL_API_BASE_URL
+    EXTERNAL_API_BASE_URL,
+    validateCarPlate,
+    validateCustomerPhone
 }; 

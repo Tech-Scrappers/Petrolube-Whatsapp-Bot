@@ -1,6 +1,7 @@
 const axios = require('axios');
 const FormData = require('form-data');
 require('dotenv').config();
+const templates = require('./whatsappTemplates');
 
 const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL;
 const API_TOKEN = process.env.API_TOKEN;
@@ -70,50 +71,74 @@ async function downloadImage(imageId) {
     }
 }
 
-// Function to send a WhatsApp template message for customer confirmation
-async function sendTemplateMessage(to, customerName, plateNumber) {
+/**
+ * Send a WhatsApp template message by template name.
+ * @param {string} to - Recipient phone number
+ * @param {string} templateName - Name of the template in whatsappTemplates.js
+ * @param {Array<string>} parameters - Array of text parameters to fill in the template
+ */
+async function sendTemplateMessageByName(to, templateName, parameters = []) {
     try {
-        console.log("Customer Name:", customerName, "Plate Number:", plateNumber);
+        const template = templates[templateName];
+        if (!template) throw new Error(`Template '${templateName}' not found.`);
+
+        // Build components array, replacing {{n}} with parameters[n-1]
+        const components = [];
+        for (const comp of template.components) {
+            if (comp.type === 'body') {
+                // WhatsApp expects parameters array for body
+                components.push({
+                    type: 'body',
+                    parameters: parameters.map(text => ({ type: 'text', text }))
+                });
+            } else if (comp.type === 'header' && comp.text) {
+                components.push({
+                    type: 'header'
+                    // No parameters for static text header
+                });
+            } else if (comp.type === 'footer' && comp.text) {
+                components.push({
+                    type: 'footer'
+                    // No parameters for static text footer
+                });
+            } else if (comp.type === 'buttons' && Array.isArray(comp.buttons)) {
+                // For each button, add a separate component with correct index and NO parameters for quick_reply
+                comp.buttons.forEach((btn, idx) => {
+                    components.push({
+                        type: 'button',
+                        sub_type: 'quick_reply',
+                        index: idx.toString()
+                        // Absolutely NO parameters field here
+                    });
+                });
+            }
+        }
+
         await axios.post(
-            `https://graph.facebook.com/v23.0/${PHONE_NUMBER_ID}/messages`,
+            `https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`,
             {
-                messaging_product: "whatsapp",
+                messaging_product: 'whatsapp',
                 to,
-                type: "template",
+                type: 'template',
                 template: {
-                    name: "car_oil_change_reward",
-                    language: { code: "en" },
-                    components: [
-                        {
-                            type: "body",
-                            parameters: [
-                                { type: "text", text: customerName },
-                                { type: "text", text: plateNumber }
-                            ]
-                        },
-                        {
-                            type: "button",
-                            sub_type: "url",
-                            index: "0",
-                            parameters: [
-                                { type: "text", text: "spin-a-wheel" }
-                            ]
-                        }
-                    ]
+                    name: template.name,
+                    language: template.language,
+                    components
                 }
             },
             {
                 headers: { Authorization: `Bearer ${API_TOKEN}` }
             }
         );
-        console.log("Template message sent successfully");
+        console.log(`Template message '${templateName}' sent successfully`);
     } catch (error) {
-        console.error("Error sending template message:", error?.response?.data || error.message);
+        console.error(`Error sending template message '${templateName}':`, error?.response?.data || error.message);
+        throw error;
     }
 }
 
 module.exports = {
     sendMessage,
     downloadImage,
-    sendTemplateMessage
+    sendTemplateMessageByName
 }; 
