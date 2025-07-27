@@ -60,8 +60,11 @@ router.post('/send-mechanic-registration-message', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: full_name, mobile_number, shop_name' });
   }
   try {
+    // Remove '+' from mobile number if present
+    const cleanMobileNumber = mobile_number.replace(/^\+/, '');
+    
     await sendTemplateMessageByName(
-      mobile_number,
+      cleanMobileNumber,
       'mechanic_onboarding',
       [full_name, shop_name]
     );
