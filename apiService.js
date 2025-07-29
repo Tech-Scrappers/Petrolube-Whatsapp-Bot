@@ -180,9 +180,17 @@ async function validateCarPlate(carPlateNumber) {
 // Validate customer phone (duplication check)
 async function validateCustomerPhone(customerPhone) {
     try {
+        // Ensure the phone number is in international format
+        const { formatSaudiPhoneNumber } = require('./phoneNumberUtils');
+        const phoneResult = formatSaudiPhoneNumber(customerPhone);
+        
+        if (!phoneResult.isValid) {
+            return { isValid: false, message: phoneResult.error };
+        }
+        
         const response = await axios.post(
             `${EXTERNAL_API_BASE_URL}/bot/validate-customer-phone`,
-            { customer_phone: customerPhone },
+            { customer_phone: phoneResult.international },
             {
                 headers: {
                     'X-Petrolube-Secret-Key': process.env.PETROLUBE_SECRET_KEY,

@@ -149,6 +149,10 @@ router.post('/webhook', (req, res) => {
                         }, INACTIVITY_REMINDER_MS);
                     }
                 };
+                
+                const clearInactivityTimer = () => {
+                    sessionManager.clearInactivityTimer(sender);
+                };
                 resetInactivityTimer();
 
                 if (message.type === 'text') {
@@ -202,6 +206,7 @@ Unable to fetch wallet data. Please try again later.`, goMenuButton);
                             }
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
+                            clearInactivityTimer(); // Clear timer when returning to menu
                         } else {
                             await sendMessage(sender, `❌ لم يتم العثور على الميكانيكي
 ❌ Mechanic not found
@@ -270,6 +275,7 @@ Please try again later.`, goMenuButton);
                             }
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
+                            clearInactivityTimer(); // Clear timer when returning to menu
                         } else {
                             await sendMessage(sender, `يرجى بدء تقديم تغيير زيت أولاً لعرض المتصدرين
 Please start an oil change submission first to view the leaderboard`);
@@ -315,6 +321,7 @@ For technical support: care@petrolubegroup.com`;
                             await sendMessage(sender, helpText, goMenuButton);
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
+                            clearInactivityTimer(); // Clear timer when returning to menu
                         } else {
                             await sendMessage(sender, `❌ لم يتم العثور على الميكانيكي
 ❌ Mechanic not found
@@ -330,6 +337,7 @@ care@petrolubegroup.com`);
                         if (mechanic) {
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
+                            clearInactivityTimer(); // Clear timer when returning to menu
                             await showMainMenu(sender);
                         } else {
                             await sendMessage(sender, `❌ لم يتم العثور على الميكانيكي
@@ -345,31 +353,44 @@ care@petrolubegroup.com`);
                         }
                         return;
                     } else if (session.state === 'customer_mobile') {
-                        const mobileNumber = text.replace(/\D/g, '');
-                        if (mobileNumber.length >= 10) {
-                            // Duplication check before proceeding
-                            const { validateCustomerPhone } = require('../apiService');
-                            const phoneValidation = await validateCustomerPhone(mobileNumber);
-                            if (!phoneValidation.isValid) {
-                                await sendMessage(sender, `❌ رقم الهاتف مكرر أو غير صالح\n❌ Duplicate or invalid customer phone\n${phoneValidation.message}`, goMenuButton);
-                                return;
-                            }
-                            session.data.customerMobile = mobileNumber;
-                            session.state = 'customer_name';
-                            sessionManager.setSession(sender, session);
-                            await sendMessage(sender, `👤 يرجى إدخال اسم العميل:\n👤 Please enter the customer's name:`);
-                        } else {
-                            await sendMessage(sender, `❌ رقم هاتف غير صحيح\n❌ Invalid mobile number\nيرجى إدخال رقم هاتف صحيح:\nPlease enter a valid mobile number:`);
+                        const { formatSaudiPhoneNumber } = require('../phoneNumberUtils');
+                        
+                        // Format and validate the phone number
+                        const phoneResult = formatSaudiPhoneNumber(text);
+                        
+                        if (!phoneResult.isValid) {
+                            await sendMessage(sender, `❌ ${phoneResult.error}\n❌ رقم هاتف غير صحيح\nيرجى إدخال رقم هاتف صحيح:\nPlease enter a valid phone number:`);
+                            return;
                         }
+                        
+                        // Duplication check before proceeding
+                        const { validateCustomerPhone } = require('../apiService');
+                        const phoneValidation = await validateCustomerPhone(phoneResult.international);
+                        if (!phoneValidation.isValid) {
+                            await sendMessage(sender, `❌ رقم الهاتف مكرر أو غير صالح\n❌ Duplicate or invalid customer phone\n${phoneValidation.message}`, goMenuButton);
+                            return;
+                        }
+                        
+                        // Store the formatted international number
+                        session.data.customerMobile = phoneResult.international;
+                        session.state = 'customer_name';
+                        sessionManager.setSession(sender, session);
+                        
+                        // Show confirmation of the formatted number
+                        await sendMessage(sender, `👤 يرجى إدخال اسم العميل:\n👤 Please enter the customer's name:`);
                     } else if (session.state === 'customer_name') {
                         const customerName = message.text.body.trim();
                         session.data.customerName = customerName;
                         sessionManager.setSession(sender, session);
                         const validation = await validateCustomer(session.data.customerMobile, session.data.plateNumber);
                         try {
+                            // Ensure customer phone is in international format
+                            const { formatSaudiPhoneNumber } = require('../phoneNumberUtils');
+                            const phoneResult = formatSaudiPhoneNumber(session.data.customerMobile);
+                            
                             const apiBody = {
                                 customer_name: session.data.customerName,
-                                customer_phone: session.data.customerMobile,
+                                customer_phone: phoneResult.international,
                                 car_plate_number: session.data.plateNumber,
                                 qr_codes: session.data.qrCodes,
                                 number_of_foils: session.data.foilCount || 0,
@@ -390,7 +411,7 @@ care@petrolubegroup.com`);
                                 const logId = `${session.data.mechanicId}_${Date.now()}`;
                                 sessionManager.addOilChangeLog(logId, {
                                     mechanicId: session.data.mechanicId,
-                                    customerMobile: session.data.customerMobile,
+                                    customerMobile: phoneResult.international,
                                     plateNumber: session.data.plateNumber,
                                     qrCodes: session.data.qrCodes,
                                     timestamp: new Date().toISOString(),
@@ -399,27 +420,34 @@ care@petrolubegroup.com`);
                                 });
                                 // Do NOT update wallet or send reward message here
                                 await sendMessage(sender, `✅ تم تقديم الطلب بنجاح!\n\nيرجى انتظار موافقة العميل. سيتم إضافة المكافأة إلى محفظتك بعد تأكيد العميل.\n\n---\n\n✅ Submission successful!\n\nPlease wait for customer approval. Your reward will be added to your wallet after customer confirmation.`, goMenuButton);
+                                // Ensure customer phone is in international format for WhatsApp
+                                const { formatSaudiPhoneNumber } = require('../phoneNumberUtils');
+                                const whatsappPhoneResult = formatSaudiPhoneNumber(session.data.customerMobile);
+                                
                                 await sendTemplateMessageByName(
-                                  session.data.customerMobile,
+                                  whatsappPhoneResult.international,
                                   'customer_approval',
                                   [session.data.customerName, session.data.plateNumber]
                                 );
-                                sessionManager.setCustomerToLog(session.data.customerMobile, logId);
+                                sessionManager.setCustomerToLog(phoneResult.international, logId);
                                 console.log('📝 Added customer to log:', {
-                                    customerMobile: session.data.customerMobile,
+                                    customerMobile: phoneResult.international,
                                     logId: logId,
                                     submissionId: submissionId
                                 });
                                 console.log('📊 Current oil change logs:', sessionManager.getOilChangeLogs());
                                 session.data.logId = logId;
                                 session.data.submissionId = submissionId;
+                                session.data.customerMobile = phoneResult.international; // Update session with international format
                                 session.state = 'menu';
                                 sessionManager.setSession(sender, session);
+                                clearInactivityTimer(); // Clear timer after successful submission
                             } else {
                                 const errorMsg = (apiResponse.data && apiResponse.data.message) ? apiResponse.data.message : '❌ فشل في تقديم تغيير الزيت. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.\n\n---\n\n❌ Oil change submission failed. Please try again or contact support.';
                                 await sendMessage(sender, errorMsg, goMenuButton);
                                 session.state = 'menu';
                                 sessionManager.setSession(sender, session);
+                                clearInactivityTimer(); // Clear timer after error
                             }
                         } catch (apiError) {
                             let errorMsg = '❌ فشل في تقديم تغيير الزيت. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.\n\n---\n\n❌ Oil change submission failed. Please try again or contact support.';
@@ -431,6 +459,7 @@ care@petrolubegroup.com`);
                             await sendMessage(sender, errorMsg, goMenuButton);
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
+                            clearInactivityTimer(); // Clear timer after error
                         }
                     }
                 } else if (message.type === 'image') {
@@ -546,6 +575,7 @@ Please follow the submission process
 Type 'menu' to start over`, goMenuButton);
                         session.state = 'menu';
                         sessionManager.setSession(sender, session);
+                        clearInactivityTimer(); // Clear timer when returning to menu
                     }
                 } else if (message.type === 'button') {
                     console.log('🔍 Button message received:', {
@@ -597,7 +627,11 @@ Type 'menu' to start over`, goMenuButton);
                                     // Send reward message to mechanic using phone number from API response
                                     const mechanicPhoneNumber = responseData.mechanic.mobile_number;
                                     console.log('📱 Sending reward message to mechanic:', mechanicPhoneNumber);
-                                    await sendMessage(mechanicPhoneNumber, `💰 *تم الحصول على المكافأة!*\n\nتم تأكيد تغيير الزيت من قبل العميل\n\n✅ تم إضافة 4 ريال إلى محفظتك\n\nلفحص رصيد المحفظة، اكتب "2" أو "wallet"\n\n---\n\n💰 *Reward Earned!*\n\nOil change confirmed by customer.\n\n✅ +4 SAR added to your wallet\n\nTo check wallet balance, type "2" or "wallet"`, goMenuButton);
+                                    
+                                    // Get car plate number from pending log
+                                    const carPlateNumber = pendingLog.plateNumber || 'N/A';
+                                    
+                                    await sendMessage(mechanicPhoneNumber, `💰 *تم الحصول على المكافأة!*\n\nتم تأكيد تغيير الزيت من قبل العميل\n\n🚗 رقم اللوحة: ${carPlateNumber}\nCar Plate: ${carPlateNumber}\n\n✅ تم إضافة 4 ريال إلى محفظتك\n\nلفحص رصيد المحفظة، اكتب "2" أو "wallet"\n\n---\n\n💰 *Reward Earned!*\n\nOil change confirmed by customer.\n\n🚗 Car Plate: ${carPlateNumber}\n\n✅ +4 SAR added to your wallet\n\nTo check wallet balance, type "2" or "wallet"`, goMenuButton);
                                     
                                     // Send confirmation message to customer with spin URL (handle null case)
                                     const spinUrl = responseData.spin_url;
@@ -663,7 +697,11 @@ Type 'menu' to start over`, goMenuButton);
                                     // Send notification to mechanic about dispute using phone number from API response
                                     const mechanicPhoneNumber = responseData.mechanic.mobile_number;
                                     console.log('📱 Sending dispute notification to mechanic:', mechanicPhoneNumber);
-                                    await sendMessage(mechanicPhoneNumber, `❌ *تم تقديم نزاع من العميل*\n\nتم تقديم نزاع على تغيير الزيت من قبل العميل\n\nيرجى الاتصال بدعم العملاء:\ncare@petrolubegroup.com\n\n---\n\n❌ *Customer Dispute Filed*\n\nA dispute has been filed by the customer for this oil change\n\nPlease contact customer support:\ncare@petrolubegroup.com`);
+                                    
+                                    // Get car plate number from pending log
+                                    const carPlateNumber = pendingLog.plateNumber || 'N/A';
+                                    
+                                    await sendMessage(mechanicPhoneNumber, `❌ *تم تقديم نزاع من العميل*\n\nتم تقديم نزاع على تغيير الزيت من قبل العميل\n\n🚗 رقم اللوحة: ${carPlateNumber}\nCar Plate: ${carPlateNumber}\n\nيرجى الاتصال بدعم العملاء:\ncare@petrolubegroup.com\n\n---\n\n❌ *Customer Dispute Filed*\n\nA dispute has been filed by the customer for this oil change\n\n🚗 Car Plate: ${carPlateNumber}\n\nPlease contact customer support:\ncare@petrolubegroup.com`);
                                     console.log('✅ All dispute messages sent successfully');
                                 }
                             } catch (error) {
@@ -678,11 +716,12 @@ Type 'menu' to start over`, goMenuButton);
                         } else {
                             console.log('⚠️ No pending log found for customer:', customerMobile);
                             console.log('📊 All current oil change logs:', sessionManager.getOilChangeLogs());
-                            await sendMessage(customerMobile, `❌ *تم تقديم النزاع*\n\nتم تسجيل نزاع تغيير الزيت الخاص بك\n\nسيتصل بك فريقنا خلال 24 ساعة لحل هذه المشكلة\n\nللمساعدة الفورية: 920000000\n\n---\n\n❌ *Dispute Filed*\n\nYour oil change dispute has been recorded\n\nOur team will contact you within 24 hours to resolve this issue\n\nFor immediate assistance: 920000000`);
+                            await sendMessage(customerMobile, `❌ *تم تقديم النزاع*\n\nتم تسجيل نزاع تغيير الزيت الخاص بك\n\nسيتصل بك فريقنا خلال 24 ساعة لحل هذه المشكلة\n\nللمساعدة الفورية: care@petrolubegroup.com\n\n---\n\n❌ *Dispute Filed*\n\nYour oil change dispute has been recorded\n\nOur team will contact you within 24 hours to resolve this issue\n\nFor immediate assistance: care@petrolubegroup.com`);
                         }
                     } else if (buttonId === 'go_menu') {
                         session.state = 'menu';
                         sessionManager.setSession(sender, session);
+                        clearInactivityTimer(); // Clear timer when returning to menu
                         await showMainMenu(sender);
                         return;
                     }
@@ -707,6 +746,7 @@ Type 'menu' to start over`, goMenuButton);
                     if (buttonId === 'go_menu') {
                         session.state = 'menu';
                         sessionManager.setSession(sender, session);
+                        clearInactivityTimer(); // Clear timer when returning to menu
                         await showMainMenu(sender);
                         return;
                     }
