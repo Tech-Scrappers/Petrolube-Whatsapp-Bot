@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { sendMessage, downloadImage } = require('../whatsappService');
+const { sendMessage, downloadImage, sendTypingIndicator } = require('../whatsappService');
 const { extractNumberPlate, detectNumberOfFoils } = require('../openaiService');
 const sessionManager = require('../sessionManager');
 const { validateMechanicByPhone, validateQRCodes, validateCustomer, updateMechanicWallet, fetchLeaderboard, fetchMechanicWallet, WHATSAPP_API_URL, API_TOKEN, PHONE_NUMBER_ID, OPENAI_API_KEY, PYTHON_QR_API_URL, EXTERNAL_API_BASE_URL } = require('../apiService');
@@ -139,6 +139,8 @@ router.post('/webhook', (req, res) => {
         setImmediate(async () => {
             try {
                 const sender = message.from;
+                // Show typing indicator before processing
+                await sendTypingIndicator(sender, messageId);
                 console.log('📨 Message received from:', sender, 'Type:', message.type);
                 let session = sessionManager.getSession(sender);
                 const resetInactivityTimer = () => {

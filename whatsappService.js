@@ -137,8 +137,34 @@ async function sendTemplateMessageByName(to, templateName, parameters = []) {
     }
 }
 
+/**
+ * Send a typing indicator to WhatsApp user.
+ * @param {string} to - Recipient phone number
+ * @param {string} messageId - The ID of the received message
+ */
+async function sendTypingIndicator(to, messageId) {
+    try {
+        await axios.post(
+            `${WHATSAPP_API_URL}/${PHONE_NUMBER_ID}/messages`,
+            {
+                messaging_product: "whatsapp",
+                status: "read",
+                message_id: messageId,
+                typing_indicator: { type: "text" }
+            },
+            {
+                headers: { Authorization: `Bearer ${API_TOKEN}` },
+            }
+        );
+        console.log("Typing indicator sent successfully");
+    } catch (error) {
+        console.error("Error sending typing indicator:", error?.response?.data || error.message);
+    }
+}
+
 module.exports = {
     sendMessage,
     downloadImage,
-    sendTemplateMessageByName
+    sendTemplateMessageByName,
+    sendTypingIndicator
 }; 
