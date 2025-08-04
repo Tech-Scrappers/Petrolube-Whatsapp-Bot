@@ -82,14 +82,30 @@ async function sendTemplateMessageByName(to, templateName, parameters = []) {
         const template = templates[templateName];
         if (!template) throw new Error(`Template '${templateName}' not found.`);
 
-        // Build components array, replacing {{n}} with parameters[n-1]
+        // Build components array
         const components = [];
+        let bodyParameterIndex = 0;
+        let buttonParameterIndex = 0;
+
         for (const comp of template.components) {
             if (comp.type === 'body') {
-                // WhatsApp expects parameters array for body
+                // Extract body parameters from the template text
+                const bodyParams = [];
+                const bodyText = comp.text;
+                const bodyParamMatches = bodyText.match(/\{\{(\d+)\}\}/g);
+                
+                if (bodyParamMatches) {
+                    bodyParamMatches.forEach(match => {
+                        const paramIndex = parseInt(match.replace(/\{\{|\}\}/g, '')) - 1;
+                        if (parameters[paramIndex]) {
+                            bodyParams.push({ type: 'text', text: parameters[paramIndex] });
+                        }
+                    });
+                }
+
                 components.push({
                     type: 'body',
-                    parameters: parameters.map(text => ({ type: 'text', text }))
+                    parameters: bodyParams
                 });
             } else if (comp.type === 'header' && comp.text) {
                 components.push({
@@ -102,14 +118,32 @@ async function sendTemplateMessageByName(to, templateName, parameters = []) {
                     // No parameters for static text footer
                 });
             } else if (comp.type === 'buttons' && Array.isArray(comp.buttons)) {
-                // For each button, add a separate component with correct index and NO parameters for quick_reply
+                // Handle buttons with parameters
                 comp.buttons.forEach((btn, idx) => {
-                    components.push({
+                    const buttonComponent = {
                         type: 'button',
-                        sub_type: 'quick_reply',
+                        sub_type: btn.type === 'URL' ? 'url' : 'quick_reply',
                         index: idx.toString()
-                        // Absolutely NO parameters field here
-                    });
+                    };
+
+                    // Add parameters for URL buttons if they have dynamic URLs
+                    if (btn.type === 'URL' && btn.url && btn.url.includes('{{')) {
+                        const urlParamMatches = btn.url.match(/\{\{(\d+)\}\}/g);
+                        if (urlParamMatches) {
+                            const urlParams = [];
+                            urlParamMatches.forEach(match => {
+                                const paramIndex = parseInt(match.replace(/\{\{|\}\}/g, '')) - 1;
+                                if (parameters[paramIndex]) {
+                                    urlParams.push({ type: 'text', text: parameters[paramIndex] });
+                                }
+                            });
+                            if (urlParams.length > 0) {
+                                buttonComponent.parameters = urlParams;
+                            }
+                        }
+                    }
+
+                    components.push(buttonComponent);
                 });
             }
         }

@@ -42,10 +42,13 @@ router.post('/send-shop-registration-message', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: shop_owner_number, shop_owner_name, shop_name' });
   }
   try {
+    // Get the terms and conditions URL from environment variable
+    const termsUrlOwner = process.env.PETROLUBE_TERMS_URL_OWNER || 'pdfs/Petrolube-Flyer-OwnerManual.pdf';
+    
     await sendTemplateMessageByName(
       shop_owner_number,
-      'shop_registeration',
-      [shop_owner_name, shop_name]
+      'shop_onboarding_with_links',
+      [shop_owner_name, shop_name, termsUrlOwner]
     );
     res.status(200).json({ success: true, message: 'Shop registration message sent.' });
   } catch (error) {
@@ -63,10 +66,13 @@ router.post('/send-mechanic-registration-message', async (req, res) => {
     // Remove '+' from mobile number if present
     const cleanMobileNumber = mobile_number.replace(/^\+/, '');
     
+    // Get the terms and conditions URL from environment variable
+    const termsUrlLabour = process.env.PETROLUBE_TERMS_URL_LABOUR || 'pdfs/Petrolube-Flyer-LabourManual.pdf';
+    
     await sendTemplateMessageByName(
       cleanMobileNumber,
-      'mechanic_onboarding',
-      [full_name, shop_name]
+      'mechanic_onboarding_with_links',
+      [full_name, shop_name, termsUrlLabour]
     );
     res.status(200).json({ success: true, message: 'Mechanic registration message sent.' });
   } catch (error) {
@@ -172,17 +178,18 @@ router.post('/webhook', (req, res) => {
 ✅ Mechanic verified: ${mechanic.name}
 
 📸 يرجى إرسال صورة للأغطية الدائرية (رموز QR)
-📸 Please send a photo of the circular foils (QR codes)
+📸 Please send a photo of the petromin foils (QR codes)
 
 *ملاحظة:* تأكد من أن جميع الأغطية الدائرية مرئية في الصورة
-*Note:* Make sure all circular foils are visible in the photo`);
+*Note:* Make sure all petromin foils are visible in the photo`);
                         } else {
                             await sendMessage(sender, `❌ لم يتم العثور على الميكانيكي
 ❌ Mechanic not found
 
 يرجى الاتصال بالدعم
 Please contact support
-care@petrolubegroup.com`);
+care@petrolubegroup.com
++966543652552`);
                             // Do NOT set session.state = 'menu' or show menu
                         }
                     } else if (text === '2' || text === 'wallet' || text === 'balance') {
@@ -215,7 +222,8 @@ Unable to fetch wallet data. Please try again later.`, goMenuButton);
 
 يرجى الاتصال بالدعم
 Please contact support
-care@petrolubegroup.com`);
+care@petrolubegroup.com
++966543652552`);
                             // Do NOT set session.state = 'menu' or show menu
                         }
                     } else if (text === '3' || text === 'leaderboard' || text === 'rankings') {
@@ -294,7 +302,7 @@ How to submit an oil change:
 1. بدء تقديم تغيير الزيت
 1. Start oil change submission
 2. إرسال صورة للأغطية الدائرية (رموز QR)
-2. Send photo of circular foils (QR codes)
+2. Send photo of petromin foils (QR codes)
 3. إرسال صورة لوحة السيارة
 3. Send photo of car number plate
 4. إدخال رقم هاتف العميل
@@ -319,7 +327,9 @@ Rewards:
 • Instant wallet credit after customer approval
 
 للدعم الفني: care@petrolubegroup.com
-For technical support: care@petrolubegroup.com`;
++966543652552
+For technical support: care@petrolubegroup.com
++966543652552`;
                             await sendMessage(sender, helpText, goMenuButton);
                             session.state = 'menu';
                             sessionManager.setSession(sender, session);
@@ -330,7 +340,8 @@ For technical support: care@petrolubegroup.com`;
 
 يرجى الاتصال بالدعم
 Please contact support
-care@petrolubegroup.com`);
+care@petrolubegroup.com
++966543652552`);
                             // Do NOT set session.state = 'menu' or show menu
                         }
                     } else if (text === 'menu' || text === 'main' || text === 'home' || text === 'hi') {
@@ -350,7 +361,8 @@ You cannot access the menu without authentication.
 
 يرجى الاتصال بالدعم
 Please contact support
-care@petrolubegroup.com`);
+care@petrolubegroup.com
++966543652552`);
                             // Do NOT set session.state = 'menu' or show menu
                         }
                         return;
@@ -511,7 +523,7 @@ Please retake the photo and ensure all QR codes are visible on the foils.`);
                         if (qrCodes.length > 0) {
                             const qrValidation = await validateQRCodes(qrCodes);
                             if (!qrValidation.isValid) {
-                                await sendMessage(sender, `❌ ${qrValidation.message}\n\nيرجى إعادة إرسال صورة الأغطية الدائرية (رموز QR) بدون تكرار.\nPlease resubmit the photo of the circular foils (QR codes) without duplicates.`, goMenuButton);
+                                await sendMessage(sender, `❌ ${qrValidation.message}\n\nيرجى إعادة إرسال صورة الأغطية الدائرية (رموز QR) بدون تكرار.\nPlease resubmit the photo of the petromin foils (QR codes) without duplicates.`, goMenuButton);
                                 // Do NOT change state, stay in 'qr_codes'
                                 return;
                             }
@@ -539,7 +551,7 @@ Found ${qrCodes.length} QR codes:
 ❌ No QR codes detected
 
 يرجى التأكد من أن جميع الأغطية الدائرية مرئية بوضوح والمحاولة مرة أخرى
-Please ensure all circular foils are clearly visible and try again`, goMenuButton);
+Please ensure all petromin foils are clearly visible and try again`, goMenuButton);
                         }
                     } else if (session.state === 'number_plate') {
                         const plateNumber = await extractNumberPlate(imageBuffer);
@@ -598,6 +610,16 @@ Type 'menu' to start over`, goMenuButton);
                     
                     if (buttonId === 'YES') {
                         console.log('✅ Customer confirmed - looking for pending log...');
+                        
+                        // First check if customer has already made a decision
+                        const existingLog = sessionManager.getOilChangeLogs().find(log => log.customerMobile === customerMobile);
+                        
+                        if (existingLog && (existingLog.status === 'confirmed' || existingLog.status === 'disputed')) {
+                            console.log('⚠️ Customer already made a decision:', existingLog.status);
+                            await sendMessage(customerMobile, `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${existingLog.status === 'confirmed' ? 'تأكيد' : 'رفض'} تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${existingLog.status === 'confirmed' ? 'confirmed' : 'disputed'} this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`);
+                            return;
+                        }
+                        
                         const pendingLog = sessionManager.getOilChangeLogs().find(log => log.customerMobile === customerMobile && log.status === 'pending_confirmation');
                         console.log('🔍 Found pending log:', pendingLog ? {
                             submissionId: pendingLog.submissionId,
@@ -641,7 +663,7 @@ Type 'menu' to start over`, goMenuButton);
                                     
                                     let customerMessage;
                                     if (spinUrl) {
-                                        customerMessage = `✅ *تم تأكيد تغيير الزيت!*\n\nشكراً لك على التأكيد!\n\n🎰 انقر هنا لتدوير عجلة المكافآت:\n${spinUrl}\n\n---\n\n✅ *Oil Change Confirmed!*\n\nThank you for confirming!\n\n🎰 Click here to spin the reward wheel:\n${spinUrl}`;
+                                        customerMessage = `✅ *تم تأكيد تغيير الزيت!*\n\nشكراً لك على التأكيد!\n\n🎰 انقر هنا لتدوير عجلة المكافآت:\n${spinUrl}\n\n---\n\n✅ *Oil Change Confirmed!*\n\nThank you for confirming!\n\n🎉 Your chance to win! 🎉\n 🎰 Tap below to spin the Reward Wheel & unlock your surprise!:\n${spinUrl}`;
                                     } else {
                                         customerMessage = `✅ *تم تأكيد تغيير الزيت!*\n\nشكراً لك على التأكيد!\n\nسيتم إرسال رابط عجلة المكافآت قريباً.\n\n---\n\n✅ *Oil Change Confirmed!*\n\nThank you for confirming!\n\nThe reward wheel link will be sent shortly.`;
                                     }
@@ -664,6 +686,16 @@ Type 'menu' to start over`, goMenuButton);
                         }
                     } else if (buttonId === 'NO') {
                         console.log('❌ Customer disputed - looking for pending log...');
+                        
+                        // First check if customer has already made a decision
+                        const existingLog = sessionManager.getOilChangeLogs().find(log => log.customerMobile === customerMobile);
+                        
+                        if (existingLog && (existingLog.status === 'confirmed' || existingLog.status === 'disputed')) {
+                            console.log('⚠️ Customer already made a decision:', existingLog.status);
+                            await sendMessage(customerMobile, `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${existingLog.status === 'confirmed' ? 'تأكيد' : 'رفض'} تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${existingLog.status === 'confirmed' ? 'confirmed' : 'disputed'} this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`);
+                            return;
+                        }
+                        
                         const pendingLog = sessionManager.getOilChangeLogs().find(log => log.customerMobile === customerMobile && log.status === 'pending_confirmation');
                         console.log('🔍 Found pending log for dispute:', pendingLog ? {
                             submissionId: pendingLog.submissionId,
@@ -703,7 +735,7 @@ Type 'menu' to start over`, goMenuButton);
                                     // Get car plate number from pending log
                                     const carPlateNumber = pendingLog.plateNumber || 'N/A';
                                     
-                                    await sendMessage(mechanicPhoneNumber, `❌ *تم تقديم نزاع من العميل*\n\nتم تقديم نزاع على تغيير الزيت من قبل العميل\n\n🚗 رقم اللوحة: ${carPlateNumber}\nCar Plate: ${carPlateNumber}\n\nيرجى الاتصال بدعم العملاء:\ncare@petrolubegroup.com\n\n---\n\n❌ *Customer Dispute Filed*\n\nA dispute has been filed by the customer for this oil change\n\n🚗 Car Plate: ${carPlateNumber}\n\nPlease contact customer support:\ncare@petrolubegroup.com`);
+                                    await sendMessage(mechanicPhoneNumber, `❌ *تم تقديم نزاع من العميل*\n\nتم تقديم نزاع على تغيير الزيت من قبل العميل\n\n🚗 رقم اللوحة: ${carPlateNumber}\nCar Plate: ${carPlateNumber}\n\nيرجى الاتصال بدعم العملاء:\ncare@petrolubegroup.com\n+966543652552\n\n---\n\n❌ *Customer Dispute Filed*\n\nA dispute has been filed by the customer for this oil change\n\n🚗 Car Plate: ${carPlateNumber}\n\nPlease contact customer support:\ncare@petrolubegroup.com\n+966543652552`);
                                     console.log('✅ All dispute messages sent successfully');
                                 }
                             } catch (error) {
@@ -718,7 +750,7 @@ Type 'menu' to start over`, goMenuButton);
                         } else {
                             console.log('⚠️ No pending log found for customer:', customerMobile);
                             console.log('📊 All current oil change logs:', sessionManager.getOilChangeLogs());
-                            await sendMessage(customerMobile, `❌ *تم تقديم النزاع*\n\nتم تسجيل نزاع تغيير الزيت الخاص بك\n\nسيتصل بك فريقنا خلال 24 ساعة لحل هذه المشكلة\n\nللمساعدة الفورية: care@petrolubegroup.com\n\n---\n\n❌ *Dispute Filed*\n\nYour oil change dispute has been recorded\n\nOur team will contact you within 24 hours to resolve this issue\n\nFor immediate assistance: care@petrolubegroup.com`);
+                            await sendMessage(customerMobile, `❌ *تم تقديم النزاع*\n\nتم تسجيل نزاع تغيير الزيت الخاص بك\n\nسيتصل بك فريقنا خلال 24 ساعة لحل هذه المشكلة\n\nللمساعدة الفورية: care@petrolubegroup.com\n+966543652552\n\n---\n\n❌ *Dispute Filed*\n\nYour oil change dispute has been recorded\n\nOur team will contact you within 24 hours to resolve this issue\n\nFor immediate assistance: care@petrolubegroup.com\n+966543652552`);
                         }
                     } else if (buttonId === 'go_menu') {
                         session.state = 'menu';
