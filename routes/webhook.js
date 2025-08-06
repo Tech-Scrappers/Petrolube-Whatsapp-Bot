@@ -9,6 +9,9 @@ const { sendTemplateMessageByName } = require('../whatsappService');
 
 const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
 
+// Campaign status configuration
+const CAMPAIGN_ACTIVE = process.env.CAMPAIGN_ACTIVE === 'true' || false;
+
 // Add this near the top, after your imports
 const goMenuButton = [
   {
@@ -45,12 +48,21 @@ router.post('/send-shop-registration-message', async (req, res) => {
     // Get the terms and conditions URL from environment variable
     const termsUrlOwner = process.env.PETROLUBE_TERMS_URL_OWNER || 'pdfs/Petrolube-Flyer-OwnerManual.pdf';
     
+    // Send English message
     await sendTemplateMessageByName(
       shop_owner_number,
       'shop_onboarding_with_links',
       [shop_owner_name, shop_name, termsUrlOwner]
     );
-    res.status(200).json({ success: true, message: 'Shop registration message sent.' });
+    
+    // Send Arabic message
+    await sendTemplateMessageByName(
+      shop_owner_number,
+      'shop_ownboarding_arabic',
+      [shop_owner_name, shop_name, termsUrlOwner]
+    );
+    
+    res.status(200).json({ success: true, message: 'Shop registration messages sent (English and Arabic).' });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Failed to send message.' });
   }
@@ -148,6 +160,21 @@ router.post('/webhook', (req, res) => {
                 // Show typing indicator before processing
                 await sendTypingIndicator(sender, messageId);
                 console.log('📨 Message received from:', sender, 'Type:', message.type);
+                
+                // Check if campaign is active
+                if (!CAMPAIGN_ACTIVE) {
+                    console.log('🚫 Campaign is not active, sending campaign not started message');
+                    await sendMessage(sender, `🚫 الحملة لم تبدأ بعد
+🚫 Campaign has not started yet
+
+يرجى الانتظار حتى بدء الحملة الرسمية
+Please wait for the official campaign launch
+
+سيتم إشعار جميع الميكانيكيين المسجلين عند بدء الحملة
+All registered mechanics will be notified when the campaign starts`);
+                    return;
+                }
+                
                 let session = sessionManager.getSession(sender);
                 const resetInactivityTimer = () => {
                     sessionManager.clearInactivityTimer(sender);
@@ -391,7 +418,7 @@ care@petrolubegroup.com
                         sessionManager.setSession(sender, session);
                         
                         // Show confirmation of the formatted number
-                        await sendMessage(sender, `👤 يرجى إدخال اسم العميل:\n👤 Please enter the customer's name:`);
+                        await sendMessage(sender, `👤 يرجى إدخال الاسم الكامل للعميل:\n👤 Please enter the customer's full name:`);
                     } else if (session.state === 'customer_name') {
                         const customerName = message.text.body.trim();
                         session.data.customerName = customerName;

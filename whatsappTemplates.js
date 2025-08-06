@@ -93,5 +93,29 @@ module.exports = {
         ]
       }
     ]
+  },
+  shop_ownboarding_arabic: {
+    name: "shop_ownboarding_arabic",
+    language: { code: "ar" },
+    components: [
+      {
+        type: "body",
+        text: "مرحبًا {{1}}،\n\nيسعدنا أن نؤكد تسجيل متجرك {{2}} بنجاح في حملة Petrolube Buy, Display & Win (BDW)!\nمرحبًا بك معنا!"
+      },
+      {
+        type: "footer",
+        text: "يرجى قراءة الشروط والأحكام أدناه"
+      },
+      {
+        type: "buttons",
+        buttons: [
+          {
+            type: "URL",
+            text: "الشروط والأحكام",
+            url: "https://petrolube.app/{{3}}"
+          }
+        ]
+      }
+    ]
   }
 }; 
