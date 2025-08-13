@@ -38,15 +38,15 @@ router.get("/api/reminder/:slug", async (req, res) => {
    * Use this code for sending template based message from META
    */
 
-  // const termsUrlLabour =
-  //   process.env.PETROLUBE_TERMS_URL_LABOUR ||
-  //   "pdfs/Petrolube-Flyer-LabourManual.pdf";
+  const termsUrlLabour =
+    process.env.PETROLUBE_TERMS_URL_LABOUR ||
+    "pdfs/Petrolube-Flyer-LabourManual.pdf";
 
-  // await sendTemplateMessageByName(phone, "mechanic_onboarding_with_links", [
-  //   "Usama Naseer",
-  //   "Habibi Tires",
-  //   termsUrlLabour,
-  // ]);
+  await sendTemplateMessageByName(phone, "mechanic_onboarding_with_links", [
+    "Usama Naseer",
+    "Habibi Tires",
+    termsUrlLabour,
+  ]);
 
   // ---------------------------------------------------------------------------------------
 
@@ -54,15 +54,15 @@ router.get("/api/reminder/:slug", async (req, res) => {
    * Use this code for sending Static message
    */
 
-  //   sendMessage(phone, textTemplate)
-  //     .then(() => {
-  //       res.json({ message: `Sent reminder to ${phone} as ${slug}` });
-  //     })
-  //     .catch((err) => {
-  //       res
-  //         .status(500)
-  //         .json({ error: "Failed to send message", details: err.message });
-  //     });
+  sendMessage(phone, textTemplate)
+    .then(() => {
+      res.json({ message: `Sent reminder to ${phone} as ${slug}` });
+    })
+    .catch((err) => {
+      res
+        .status(500)
+        .json({ error: "Failed to send message", details: err.message });
+    });
 
   return res.json({ message: `Sent reminder to ${phone} as ${slug}` });
 });
