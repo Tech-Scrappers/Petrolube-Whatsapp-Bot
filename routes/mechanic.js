@@ -28,7 +28,7 @@ router.get("/api/reminder/:slug", async (req, res) => {
 
   if (slug === "mechanic") {
     // This is for static message
-    textTemplate = "كونوا على أتم الاستعداد، انتم على موعد مع بداية حملة بترولوب غدًا بتاريخ 15 أغسطس\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة";
+    textTemplate = "كونوا على أتم الاستعداد، انتم على موعد مع بداية حملة بترولوب غدًا بتاريخ 15 أغسطس\n\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة";
   } else if (slug === "shop-owner") {
     // This is for static shop owner message
     textTemplate = "This is a reminder for the shop owner.";
