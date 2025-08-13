@@ -28,7 +28,7 @@ router.get("/api/reminder/:slug", async (req, res) => {
 
   if (slug === "mechanic") {
     // This is for static message
-    textTemplate = "This is a reminder for the mechanic.";
+    textTemplate = "كونوا على أتم الاستعداد، انتم على موعد مع بداية حملة بترولوب غدًا بتاريخ 15 أغسطس\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة";
   } else if (slug === "shop-owner") {
     // This is for static shop owner message
     textTemplate = "This is a reminder for the shop owner.";
@@ -42,11 +42,11 @@ router.get("/api/reminder/:slug", async (req, res) => {
     process.env.PETROLUBE_TERMS_URL_LABOUR ||
     "pdfs/Petrolube-Flyer-LabourManual.pdf";
 
-  await sendTemplateMessageByName(phone, "mechanic_onboarding_with_links", [
-    "Usama Naseer",
-    "Habibi Tires",
-    termsUrlLabour,
-  ]);
+  // await sendTemplateMessageByName(phone, "mechanic_onboarding_with_links", [
+  //   "Usama Naseer",
+  //   "Habibi Tires",
+  //   termsUrlLabour,
+  // ]);
 
   // ---------------------------------------------------------------------------------------
 
