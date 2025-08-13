@@ -1,6 +1,7 @@
 const express = require('express');
 require('dotenv').config();
 const fileUpload = require('express-fileupload');
+const path = require('path');
 const webhookRouter = require('./routes/webhook');
 const mechanicRouter = require('./routes/mechanic');
 const imageDetectionRouter = require('./routes/imageDetection');
@@ -14,6 +15,10 @@ app.use(fileUpload({
     useTempFiles: false,
     debug: false
 }));
+
+// Serve static files from public directory
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 app.use(webhookRouter);
 app.use(mechanicRouter);
 app.use(imageDetectionRouter);

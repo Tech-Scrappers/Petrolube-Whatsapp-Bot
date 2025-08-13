@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const sessionManager = require("../sessionManager");
-const { sendMessage } = require("../whatsappService");
+const { sendMessage, sendVideoMessage } = require("../whatsappService");
 const { text } = require("body-parser");
 const { sendTemplateMessageByName } = require("../whatsappService");
 
@@ -16,6 +16,8 @@ router.get("/api/reminder/:slug", async (req, res) => {
   const slug = req.params.slug;
   const phone = req.query.phone;
   let textTemplate = "";
+  let videoUrl = "";
+  
   if (!phone) {
     return res.status(400).json({ error: "Missing phone query parameter" });
   }
@@ -29,9 +31,11 @@ router.get("/api/reminder/:slug", async (req, res) => {
   if (slug === "mechanic") {
     // This is for static message
     textTemplate = "كونوا على أتم الاستعداد، انتم على موعد مع بداية حملة بترولوب غدًا بتاريخ 15 أغسطس\n\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة";
+    videoUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/public/videos/mechanic-intro.mp4`;
   } else if (slug === "shop-owner") {
     // This is for static shop owner message
     textTemplate = "This is a reminder for the shop owner.";
+    videoUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/public/videos/shop-owner-intro.mp4`;
   }
 
   /**
@@ -51,20 +55,34 @@ router.get("/api/reminder/:slug", async (req, res) => {
   // ---------------------------------------------------------------------------------------
 
   /**
-   * Use this code for sending Static message
+   * Use this code for sending Static message and video
    */
 
-  sendMessage(phone, textTemplate)
-    .then(() => {
-      res.json({ message: `Sent reminder to ${phone} as ${slug}` });
-    })
-    .catch((err) => {
-      res
-        .status(500)
-        .json({ error: "Failed to send message", details: err.message });
+  try {
+    // Send text message first
+    await sendMessage(phone, textTemplate);
+    console.log(`Text message sent successfully to ${phone}`);
+    
+    // Send video message
+    await sendVideoMessage(phone, videoUrl);
+    console.log(`Video message sent successfully to ${phone}`);
+    
+    res.json({ 
+      message: `Sent reminder and video to ${phone} as ${slug}`,
+      textSent: true,
+      videoSent: true
     });
-
-  return res.json({ message: `Sent reminder to ${phone} as ${slug}` });
+  } catch (err) {
+    console.error("Error sending messages:", err);
+    res
+      .status(500)
+      .json({ 
+        error: "Failed to send messages", 
+        details: err.message,
+        textSent: false,
+        videoSent: false
+      });
+  }
 });
 
 // Mechanic logs endpoint

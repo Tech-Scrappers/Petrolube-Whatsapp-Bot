@@ -196,9 +196,43 @@ async function sendTypingIndicator(to, messageId) {
     }
 }
 
+/**
+ * Send a video message via WhatsApp Cloud API.
+ * @param {string} to - Recipient phone number
+ * @param {string} videoUrl - URL of the video to send
+ * @param {string} caption - Optional caption for the video
+ */
+async function sendVideoMessage(to, videoUrl, caption = "شاهد الفيديو لمزيد من التفاصيل") {
+    try {
+        await axios.post(
+            `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+            {
+                messaging_product: "whatsapp",
+                to,
+                type: "video",
+                video: { 
+                    link: videoUrl, 
+                    caption: caption 
+                }
+            },
+            {
+                headers: { 
+                    Authorization: `Bearer ${API_TOKEN}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        console.log("Video message sent successfully");
+    } catch (error) {
+        console.error("Error sending video message:", error?.response?.data || error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     sendMessage,
     downloadImage,
     sendTemplateMessageByName,
-    sendTypingIndicator
+    sendTypingIndicator,
+    sendVideoMessage
 }; 
