@@ -107,11 +107,25 @@ async function sendTemplateMessageByName(to, templateName, parameters = []) {
                     type: 'body',
                     parameters: bodyParams
                 });
-            } else if (comp.type === 'header' && comp.text) {
-                components.push({
-                    type: 'header'
-                    // No parameters for static text header
-                });
+            } else if (comp.type === 'header') {
+                if (comp.format === 'VIDEO') {
+                    // Handle video header
+                    components.push({
+                        type: 'header',
+                        parameters: [{
+                            type: 'video',
+                            video: {
+                                link: comp.text
+                            }
+                        }]
+                    });
+                } else if (comp.text) {
+                    // Handle text header
+                    components.push({
+                        type: 'header'
+                        // No parameters for static text header
+                    });
+                }
             } else if (comp.type === 'footer' && comp.text) {
                 components.push({
                     type: 'footer'
