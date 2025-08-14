@@ -117,5 +117,20 @@ module.exports = {
         ]
       }
     ]
+  },
+  mechanic_reminder_arabic: {
+    name: "mechanic_reminder_arabic",
+    language: { code: "ar" },
+    components: [
+      {
+        type: "header",
+        format: "VIDEO",
+        text: "https://bot.petrolube.app/public/videos/mechanic-intro.mp4"
+      },
+      {
+        type: "body",
+        text: "كونوا على أتم الاستعداد، انتم على موعد مع بداية حملة بترولوب غدًا بتاريخ 15 أغسطس\n\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة"
+      }
+    ]
   }
 }; 

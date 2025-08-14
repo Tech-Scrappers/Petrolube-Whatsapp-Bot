@@ -32,6 +32,7 @@ router.get("/api/reminder/:slug", async (req, res) => {
     // This is for static message
     textTemplate = "كونوا على أتم الاستعداد، انتم على موعد مع بداية حملة بترولوب غدًا بتاريخ 15 أغسطس\n\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة";
     videoUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/public/videos/mechanic-intro.mp4`;
+    await sendTemplateMessageByName(phone, "mechanic_reminder_arabic");
   } else if (slug === "shop-owner") {
     // This is for static shop owner message
     textTemplate = "This is a reminder for the shop owner.";
@@ -42,15 +43,7 @@ router.get("/api/reminder/:slug", async (req, res) => {
    * Use this code for sending template based message from META
    */
 
-  const termsUrlLabour =
-    process.env.PETROLUBE_TERMS_URL_LABOUR ||
-    "pdfs/Petrolube-Flyer-LabourManual.pdf";
-
-  // await sendTemplateMessageByName(phone, "mechanic_onboarding_with_links", [
-  //   "Usama Naseer",
-  //   "Habibi Tires",
-  //   termsUrlLabour,
-  // ]);
+  res.json({ message: "Message sent successfully" });
 
   // ---------------------------------------------------------------------------------------
 
@@ -58,31 +51,31 @@ router.get("/api/reminder/:slug", async (req, res) => {
    * Use this code for sending Static message and video
    */
 
-  try {
-    // Send text message first
-    await sendMessage(phone, textTemplate);
-    console.log(`Text message sent successfully to ${phone}`);
+  // try {
+  //   // Send text message first
+  //   await sendMessage(phone, textTemplate);
+  //   console.log(`Text message sent successfully to ${phone}`);
     
-    // Send video message
-    await sendVideoMessage(phone, videoUrl);
-    console.log(`Video message sent successfully to ${phone}`);
+  //   // Send video message
+  //   await sendVideoMessage(phone, videoUrl);
+  //   console.log(`Video message sent successfully to ${phone}`);
     
-    res.json({ 
-      message: `Sent reminder and video to ${phone} as ${slug}`,
-      textSent: true,
-      videoSent: true
-    });
-  } catch (err) {
-    console.error("Error sending messages:", err);
-    res
-      .status(500)
-      .json({ 
-        error: "Failed to send messages", 
-        details: err.message,
-        textSent: false,
-        videoSent: false
-      });
-  }
+  //   res.json({ 
+  //     message: `Sent reminder and video to ${phone} as ${slug}`,
+  //     textSent: true,
+  //     videoSent: true
+  //   });
+  // } catch (err) {
+  //   console.error("Error sending messages:", err);
+  //   res
+  //     .status(500)
+  //     .json({ 
+  //       error: "Failed to send messages", 
+  //       details: err.message,
+  //       textSent: false,
+  //       videoSent: false
+  //     });
+  // }
 });
 
 // Mechanic logs endpoint
