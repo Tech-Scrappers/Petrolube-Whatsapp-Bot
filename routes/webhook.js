@@ -805,9 +805,9 @@ Type 'menu' to start over`,
             messageType: message.type,
           });
 
-          const existingLog = sessionManager
-            .getOilChangeLogs()
-            .find((log) => log.customerMobile === customerMobile);
+          // const existingLog = sessionManager
+          //   .getOilChangeLogs()
+          //   .find((log) => log.customerMobile === customerMobile);
 
           if (buttonId === "YES") {
             console.log("✅ Customer confirmed - looking for pending log...");
