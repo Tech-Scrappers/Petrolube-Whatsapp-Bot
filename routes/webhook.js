@@ -805,33 +805,37 @@ Type 'menu' to start over`,
             messageType: message.type,
           });
 
+          const existingLog = sessionManager
+            .getOilChangeLogs()
+            .find((log) => log.customerMobile === customerMobile);
+
           if (buttonId === "YES") {
             console.log("✅ Customer confirmed - looking for pending log...");
 
             // First check if customer has already made a decision
-            const existingLog = sessionManager
-              .getOilChangeLogs()
-              .find((log) => log.customerMobile === customerMobile);
+            // const existingLog = sessionManager
+            //   .getOilChangeLogs()
+            //   .find((log) => log.customerMobile === customerMobile);
 
-            if (
-              existingLog &&
-              (existingLog.status === "confirmed" ||
-                existingLog.status === "disputed")
-            ) {
-              console.log(
-                "⚠️ Customer already made a decision:",
-                existingLog.status
-              );
-              await sendMessage(
-                customerMobile,
-                `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
-                  existingLog.status === "confirmed" ? "تأكيد" : "رفض"
-                } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
-                  existingLog.status === "confirmed" ? "confirmed" : "disputed"
-                } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
-              );
-              return;
-            }
+            // if (
+            //   existingLog &&
+            //   (existingLog.status === "confirmed" ||
+            //     existingLog.status === "disputed")
+            // ) {
+            //   console.log(
+            //     "⚠️ Customer already made a decision:",
+            //     existingLog.status
+            //   );
+            //   await sendMessage(
+            //     customerMobile,
+            //     `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
+            //       existingLog.status === "confirmed" ? "تأكيد" : "رفض"
+            //     } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
+            //       existingLog.status === "confirmed" ? "confirmed" : "disputed"
+            //     } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
+            //   );
+            //   return;
+            // }
 
             const pendingLog = sessionManager
               .getOilChangeLogs()
@@ -938,33 +942,38 @@ Type 'menu' to start over`,
                 sessionManager.getOilChangeLogs()
               );
             }
-          } else if (buttonId === "NO") {
+          } else if (
+            // Test condition (usama)
+            buttonId === "NO" // && pendingLog.
+          ) {
             console.log("❌ Customer disputed - looking for pending log...");
 
             // First check if customer has already made a decision
-            const existingLog = sessionManager
-              .getOilChangeLogs()
-              .find((log) => log.customerMobile === customerMobile);
+            // const existingLog = sessionManager
+            //   .getOilChangeLogs()
+            //   .find((log) => log.customerMobile === customerMobile);
 
-            if (
-              existingLog &&
-              (existingLog.status === "confirmed" ||
-                existingLog.status === "disputed")
-            ) {
-              console.log(
-                "⚠️ Customer already made a decision:",
-                existingLog.status
-              );
-              await sendMessage(
-                customerMobile,
-                `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
-                  existingLog.status === "confirmed" ? "تأكيد" : "رفض"
-                } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
-                  existingLog.status === "confirmed" ? "confirmed" : "disputed"
-                } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
-              );
-              return;
-            }
+            // if (
+            //   existingLog &&
+            //   (existingLog.status === "confirmed" ||
+            //     existingLog.status === "disputed")
+            // ) {
+            //   console.log(
+            //     "⚠️ Customer already made a decision:",
+            //     existingLog.status
+            //   );
+
+            //   await sendMessage(
+            //     customerMobile,
+            //     `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
+            //       existingLog.status === "confirmed" ? "تأكيد" : "رفض"
+            //     } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
+            //       existingLog.status === "confirmed" ? "confirmed" : "disputed"
+            //     } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
+            //   );
+
+            //   return;
+            // }
 
             const pendingLog = sessionManager
               .getOilChangeLogs()
