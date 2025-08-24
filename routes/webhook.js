@@ -93,6 +93,31 @@ router.post("/send-shop-registration-message", async (req, res) => {
   }
 });
 
+// Endpoint to send shop registration template message
+router.post("/send-customer-reminder-message", async (req, res) => {
+  const { mobile_number } = req.body;
+  if (!mobile_number) {
+    return res.status(400).json({
+      error: "Missing required fields: mobile_number",
+    });
+  }
+  try {
+    // Send English message
+    await sendTemplateMessageByName(
+      mobile_number,
+      "customer_reminder_oil_change",
+      []
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Customer reminder message sent.",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Failed to send message." });
+  }
+});
+
 // Endpoint to send mechanic registration template message
 router.post("/send-mechanic-registration-message", async (req, res) => {
   const { full_name, mobile_number, shop_name } = req.body;
@@ -524,18 +549,54 @@ care@petrolubegroup.com
 
             // Store the formatted international number
             session.data.customerMobile = phoneResult.international;
-            session.state = "customer_name";
+            session.state = "customer_first_name";
             sessionManager.setSession(sender, session);
 
             // Show confirmation of the formatted number
             await sendMessage(
               sender,
-              `👤 يرجى إدخال الاسم الكامل للعميل:\n👤 Please enter the customer's full name:`
+              `👤 يرجى إدخال الاسم الأول للعميل:\n👤 Please enter the customer's first name:`
             );
-          } else if (session.state === "customer_name") {
-            const customerName = message.text.body.trim();
-            session.data.customerName = customerName;
+          } else if (session.state === "customer_first_name") {
+            const customerFirstName = message.text.body.trim();
+            session.data.customerFirstName = customerFirstName;
+            session.state = "customer_middle_name";
             sessionManager.setSession(sender, session);
+
+            await sendMessage(
+              sender,
+              `👤 يرجى إدخال الاسم الأوسط للعميل (اختياري - اكتب "لا" إذا لم يكن موجود):\n👤 Please enter the customer's middle name (optional - type "no" if not applicable):`
+            );
+          } else if (session.state === "customer_middle_name") {
+            const customerMiddleName = message.text.body.trim();
+            session.data.customerMiddleName =
+              customerMiddleName === "لا" ||
+              customerMiddleName.toLowerCase() === "no"
+                ? ""
+                : customerMiddleName;
+            session.state = "customer_last_name";
+            sessionManager.setSession(sender, session);
+
+            await sendMessage(
+              sender,
+              `👤 يرجى إدخال اسم العائلة للعميل:\n👤 Please enter the customer's last name:`
+            );
+          } else if (session.state === "customer_last_name") {
+            const customerLastName = message.text.body.trim();
+            session.data.customerLastName = customerLastName;
+
+            // Combine the names for display
+            const fullName = [
+              session.data.customerFirstName,
+              session.data.customerMiddleName,
+              session.data.customerLastName,
+            ]
+              .filter((name) => name && name.trim())
+              .join(" ");
+
+            session.data.customerName = fullName;
+            sessionManager.setSession(sender, session);
+
             const validation = await validateCustomer(
               session.data.customerMobile,
               session.data.plateNumber
@@ -548,7 +609,9 @@ care@petrolubegroup.com
               );
 
               const apiBody = {
-                customer_name: session.data.customerName,
+                customer_first_name: session.data.customerFirstName,
+                customer_middle_name: session.data.customerMiddleName,
+                customer_last_name: session.data.customerLastName,
                 customer_phone: phoneResult.international,
                 car_plate_number: session.data.plateNumber,
                 qr_codes: session.data.qrCodes,
@@ -805,37 +868,33 @@ Type 'menu' to start over`,
             messageType: message.type,
           });
 
-          // const existingLog = sessionManager
-          //   .getOilChangeLogs()
-          //   .find((log) => log.customerMobile === customerMobile);
-
           if (buttonId === "YES") {
             console.log("✅ Customer confirmed - looking for pending log...");
 
             // First check if customer has already made a decision
-            // const existingLog = sessionManager
-            //   .getOilChangeLogs()
-            //   .find((log) => log.customerMobile === customerMobile);
+            const existingLog = sessionManager
+              .getOilChangeLogs()
+              .find((log) => log.customerMobile === customerMobile);
 
-            // if (
-            //   existingLog &&
-            //   (existingLog.status === "confirmed" ||
-            //     existingLog.status === "disputed")
-            // ) {
-            //   console.log(
-            //     "⚠️ Customer already made a decision:",
-            //     existingLog.status
-            //   );
-            //   await sendMessage(
-            //     customerMobile,
-            //     `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
-            //       existingLog.status === "confirmed" ? "تأكيد" : "رفض"
-            //     } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
-            //       existingLog.status === "confirmed" ? "confirmed" : "disputed"
-            //     } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
-            //   );
-            //   return;
-            // }
+            if (
+              existingLog &&
+              (existingLog.status === "confirmed" ||
+                existingLog.status === "disputed")
+            ) {
+              console.log(
+                "⚠️ Customer already made a decision:",
+                existingLog.status
+              );
+              await sendMessage(
+                customerMobile,
+                `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
+                  existingLog.status === "confirmed" ? "تأكيد" : "رفض"
+                } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
+                  existingLog.status === "confirmed" ? "confirmed" : "disputed"
+                } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
+              );
+              return;
+            }
 
             const pendingLog = sessionManager
               .getOilChangeLogs()
@@ -942,38 +1001,33 @@ Type 'menu' to start over`,
                 sessionManager.getOilChangeLogs()
               );
             }
-          } else if (
-            // Test condition (usama)
-            buttonId === "NO" // && pendingLog.
-          ) {
+          } else if (buttonId === "NO") {
             console.log("❌ Customer disputed - looking for pending log...");
 
             // First check if customer has already made a decision
-            // const existingLog = sessionManager
-            //   .getOilChangeLogs()
-            //   .find((log) => log.customerMobile === customerMobile);
+            const existingLog = sessionManager
+              .getOilChangeLogs()
+              .find((log) => log.customerMobile === customerMobile);
 
-            // if (
-            //   existingLog &&
-            //   (existingLog.status === "confirmed" ||
-            //     existingLog.status === "disputed")
-            // ) {
-            //   console.log(
-            //     "⚠️ Customer already made a decision:",
-            //     existingLog.status
-            //   );
-
-            //   await sendMessage(
-            //     customerMobile,
-            //     `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
-            //       existingLog.status === "confirmed" ? "تأكيد" : "رفض"
-            //     } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
-            //       existingLog.status === "confirmed" ? "confirmed" : "disputed"
-            //     } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
-            //   );
-
-            //   return;
-            // }
+            if (
+              existingLog &&
+              (existingLog.status === "confirmed" ||
+                existingLog.status === "disputed")
+            ) {
+              console.log(
+                "⚠️ Customer already made a decision:",
+                existingLog.status
+              );
+              await sendMessage(
+                customerMobile,
+                `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
+                  existingLog.status === "confirmed" ? "تأكيد" : "رفض"
+                } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
+                  existingLog.status === "confirmed" ? "confirmed" : "disputed"
+                } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
+              );
+              return;
+            }
 
             const pendingLog = sessionManager
               .getOilChangeLogs()
