@@ -118,6 +118,16 @@ module.exports = {
       }
     ]
   },
+  customer_reminder_oil_change: {
+    name: "customer_reminder_oil_change",
+    language: { code: "ar" },
+    components: [
+      {
+        type: "body",
+        text: "ود لفت انتباهكم على ضرورة اتمام التسجيل في السحب وذلك عن طريق الاجابة (بنعم) من خلال رسالة التاكيد لإتمام تسجيل عملية تغيير الزيت بنجاح.\n\nWe would like to draw your attention to the necessity of completing your registration for the draw by answering (yes) in the confirmation message to successfully complete your oil change registration."
+      }
+    ]
+  },
   mechanic_reminder_arabic: {
     name: "mechanic_reminder_arabic",
     language: { code: "ar" },

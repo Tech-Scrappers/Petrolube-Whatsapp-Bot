@@ -93,6 +93,31 @@ router.post("/send-shop-registration-message", async (req, res) => {
   }
 });
 
+// Endpoint to send shop registration template message
+router.post("/send-customer-reminder-message", async (req, res) => {
+  const { mobile_number } = req.body;
+  if (!mobile_number) {
+    return res.status(400).json({
+      error: "Missing required fields: mobile_number",
+    });
+  }
+  try {
+    // Send English message
+    await sendTemplateMessageByName(
+      mobile_number,
+      "customer_reminder_oil_change",
+      []
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Customer reminder message sent.",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Failed to send message." });
+  }
+});
+
 // Endpoint to send mechanic registration template message
 router.post("/send-mechanic-registration-message", async (req, res) => {
   const { full_name, mobile_number, shop_name } = req.body;
