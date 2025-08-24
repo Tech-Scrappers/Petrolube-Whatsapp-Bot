@@ -996,10 +996,10 @@ Type 'menu' to start over`,
                 "⚠️ No pending log found for customer confirmation:",
                 customerMobile
               );
-              console.log(
-                "📊 All current oil change logs:",
-                sessionManager.getOilChangeLogs()
-              );
+              // console.log(
+              //   "📊 All current oil change logs:",
+              //   sessionManager.getOilChangeLogs()
+              // );
             }
           } else if (buttonId === "NO") {
             console.log("❌ Customer disputed - looking for pending log...");
