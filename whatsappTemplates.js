@@ -118,6 +118,16 @@ module.exports = {
       }
     ]
   },
+  customer_reminder_oil_change: {
+    name: "customer_reminder_oil_change",
+    language: { code: "ar" },
+    components: [
+      {
+        type: "body",
+        text: "ود لفت انتباهكم على ضرورة اتمام التسجيل في السحب وذلك عن طريق الاجابة (بنعم) من خلال رسالة التاكيد لإتمام تسجيل عملية تغيير الزيت بنجاح.\n\nWe would like to draw your attention to the necessity of completing your registration for the draw by answering (yes) in the confirmation message to successfully complete your oil change registration."
+      }
+    ]
+  },
   mechanic_reminder_arabic: {
     name: "mechanic_reminder_arabic",
     language: { code: "ar" },
@@ -129,7 +139,7 @@ module.exports = {
       },
       {
         type: "body",
-        text: "كونوا على أتم الاستعداد، انتم على موعد مع بداية حملة بترولوب غدًا بتاريخ 15 أغسطس\n\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة"
+        text: "حملة بترولوب مستمرة، لا تفوتكم فرصة المشاركة لربح جوائز اكثر!\n\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة"
       }
     ]
   }
