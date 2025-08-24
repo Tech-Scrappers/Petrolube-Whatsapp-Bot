@@ -4,7 +4,9 @@
   "main": "MechanicBot.js",
   "scripts": {
     "start": "node MechanicBot.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "axios": "^1.6.7",
@@ -16,6 +18,11 @@
     "libphonenumber-js": "^1.12.10",
     "node-cron": "^4.2.1",
     "openai": "^4.30.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "nock": "^13.5.4"
   },
   "keywords": [],
   "author": "",

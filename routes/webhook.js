@@ -565,15 +565,11 @@ care@petrolubegroup.com
 
             await sendMessage(
               sender,
-              `👤 يرجى إدخال الاسم الأوسط للعميل (اختياري - اكتب "لا" إذا لم يكن موجود):\n👤 Please enter the customer's middle name (optional - type "no" if not applicable):`
+              `👤 يرجى إدخال الاسم الأوسط للعميل :\n👤 Please enter the customer's middle name:`
             );
           } else if (session.state === "customer_middle_name") {
             const customerMiddleName = message.text.body.trim();
-            session.data.customerMiddleName =
-              customerMiddleName === "لا" ||
-              customerMiddleName.toLowerCase() === "no"
-                ? ""
-                : customerMiddleName;
+            session.data.customerMiddleName = customerMiddleName;
             session.state = "customer_last_name";
             sessionManager.setSession(sender, session);
 
@@ -590,9 +586,7 @@ care@petrolubegroup.com
               session.data.customerFirstName,
               session.data.customerMiddleName,
               session.data.customerLastName,
-            ]
-              .filter((name) => name && name.trim())
-              .join(" ");
+            ].join(" ");
 
             session.data.customerName = fullName;
             sessionManager.setSession(sender, session);
