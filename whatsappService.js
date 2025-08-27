@@ -119,6 +119,17 @@ async function sendTemplateMessageByName(to, templateName, parameters = []) {
                             }
                         }]
                     });
+                } else if (comp.format === 'IMAGE') {
+                    // Handle image header
+                    components.push({
+                        type: 'header',
+                        parameters: [{
+                            type: 'image',
+                            video: {
+                                link: comp.text
+                            }
+                        }]
+                    });
                 } else if (comp.text) {
                     // Handle text header
                     components.push({

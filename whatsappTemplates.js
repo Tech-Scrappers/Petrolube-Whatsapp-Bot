@@ -142,5 +142,20 @@ module.exports = {
         text: "حملة بترولوب مستمرة، لا تفوتكم فرصة المشاركة لربح جوائز اكثر!\n\nقم بمشاهدة الفيديو التعريفي لمعرفة خطوات تسجيل عمليات تغيير الزيت للعميل وكيفية المشاركة والاستفادة من الحملة"
       }
     ]
+  },
+  customer_mega_prizes: {
+    name: "customer_mega_prizes",
+    language: { code: "ar" },
+    components: [
+      {
+        type: "header",
+        format: "IMAGE",
+        text: "https://bot.petrolube.app/public/images/customer-mega-prizes.jpg"
+      },
+      {
+        type: "body",
+        text: 'خليكم جاهزين للسحب الكبير يوم 28 مع حملة "اختار زيوت بترومين" من بترولوب، ولا تنسوا تستخدموا عجلة الجوائز للمزيد من الهدايا، كونوا على اتم الاستعداد.\n\nLucky Draw Alert! Win mega prizes at 28th with ‘Choose Petromin Oil’ campaign from Petrolube. Don’t forget to spin the wheel for more rewards, and get ready to win big!'
+      }
+    ]
   }
 }; 
