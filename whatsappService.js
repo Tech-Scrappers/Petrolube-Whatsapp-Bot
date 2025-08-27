@@ -125,7 +125,7 @@ async function sendTemplateMessageByName(to, templateName, parameters = []) {
                         type: 'header',
                         parameters: [{
                             type: 'image',
-                            video: {
+                            image: {
                                 link: comp.text
                             }
                         }]
