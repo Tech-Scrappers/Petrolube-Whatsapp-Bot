@@ -146,26 +146,59 @@ router.post("/send-customer-mega-prize-message", async (req, res) => {
 
 // Endpoint to send choose petromin oil template message
 router.post("/send-choose-petromin-oil-message", async (req, res) => {
-  const { mobile_number } = req.body;
-  if (!mobile_number) {
+  const { mobile_numbers } = req.body;
+  if (!mobile_numbers || !Array.isArray(mobile_numbers) || mobile_numbers.length === 0) {
     return res.status(400).json({
-      error: "Missing required fields: mobile_number",
+      error: "Missing required fields: mobile_numbers (must be a non-empty array)",
     });
   }
+
+  // Limit to 50 items
+  const limitedNumbers = mobile_numbers.slice(0, 50);
+  
   try {
-    // Send English message
-    await sendTemplateMessageByName(
-      mobile_number,
-      "choose_petromin_oil",
-      []
-    );
+    const results = [];
+    
+    for (let i = 0; i < limitedNumbers.length; i++) {
+      const mobile_number = limitedNumbers[i];
+      
+      try {
+        // Send message to current number
+        await sendTemplateMessageByName(
+          mobile_number,
+          "choose_petromin_oil",
+          []
+        );
+        
+        results.push({
+          mobile_number,
+          status: "success",
+          message: "Message sent successfully"
+        });
+        
+        // Add 0.5 second delay before next message (except for the last one)
+        if (i < limitedNumbers.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+      } catch (error) {
+        results.push({
+          mobile_number,
+          status: "error",
+          message: error.message || "Failed to send message"
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
-      message: "Choose petromin oil message sent.",
+      message: `Processed ${limitedNumbers.length} mobile numbers`,
+      results: results,
+      total_processed: limitedNumbers.length
     });
+    
   } catch (error) {
-    res.status(500).json({ error: error.message || "Failed to send message." });
+    res.status(500).json({ error: error.message || "Failed to process messages." });
   }
 });
 
