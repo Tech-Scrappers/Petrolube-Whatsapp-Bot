@@ -20,6 +20,7 @@ const {
   OPENAI_API_KEY,
   PYTHON_QR_API_URL,
   EXTERNAL_API_BASE_URL,
+  createOilChangeLog,
 } = require("../apiService");
 const { showMainMenu } = require("../menuService");
 const { sendTemplateMessageByName } = require("../whatsappService");
@@ -273,19 +274,47 @@ All registered mechanics will be notified when the campaign starts`
               session.data.mechanicId = mechanic.id;
               session.data.mechanicName = mechanic.name;
               session.data.mechanicNameAr = mechanic.nameAr;
+              
+              // Create initial oil change log with parent_id = null
+              const logResponse = await createOilChangeLog(
+                mechanic.id,
+                null, // parent_id = null for initial log
+                1, // step = 1
+                "passed", // status
+                text, // details = full message
+                "Started oil change flow" // message = single line summary
+              );
+              
+              if (logResponse && logResponse.id) {
+                session.data.logParentId = logResponse.id;
+                console.log("📝 Created oil change log with ID:", logResponse.id);
+              }
+              
               session.state = "qr_codes";
               sessionManager.setSession(sender, session);
-              await sendMessage(
-                sender,
-                `✅ تم التحقق من الميكانيكي: ${mechanic.nameAr}
+              
+              const botMessage = `✅ تم التحقق من الميكانيكي: ${mechanic.nameAr}
 ✅ Mechanic verified: ${mechanic.name}
 
 📸 يرجى إرسال صورة للأغطية الدائرية (رموز QR)
 📸 Please send a photo of the petromin foils (QR codes)
 
 *ملاحظة:* تأكد من أن جميع الأغطية الدائرية مرئية في الصورة
-*Note:* Make sure all petromin foils are visible in the photo`
-              );
+*Note:* Make sure all petromin foils are visible in the photo`;
+              
+              await sendMessage(sender, botMessage);
+              
+              // Log bot response
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  mechanic.id,
+                  session.data.logParentId, // parent_id = log ID from previous step
+                  2, // step = 2
+                  "passed", // status
+                  botMessage, // details = full bot message
+                  "Bot requested QR codes photo" // message = single line summary
+                );
+              }
             } else {
               await sendMessage(
                 sender,
@@ -520,16 +549,38 @@ care@petrolubegroup.com
             }
             return;
           } else if (session.state === "customer_mobile") {
+            // Log mechanic's customer mobile input
+            if (session.data.logParentId) {
+              await createOilChangeLog(
+                session.data.mechanicId,
+                session.data.logParentId,
+                9, // step = 9
+                "passed",
+                text,
+                "Mechanic entered customer mobile number"
+              );
+            }
+            
             const { formatSaudiPhoneNumber } = require("../phoneNumberUtils");
 
             // Format and validate the phone number
             const phoneResult = formatSaudiPhoneNumber(text);
 
             if (!phoneResult.isValid) {
-              await sendMessage(
-                sender,
-                `❌ ${phoneResult.error}\n❌ رقم هاتف غير صحيح\nيرجى إدخال رقم هاتف صحيح:\nPlease enter a valid phone number:`
-              );
+              const errorMessage = `❌ ${phoneResult.error}\n❌ رقم هاتف غير صحيح\nيرجى إدخال رقم هاتف صحيح:\nPlease enter a valid phone number:`;
+              await sendMessage(sender, errorMessage);
+              
+              // Log bot error response
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  session.data.mechanicId,
+                  session.data.logParentId,
+                  10, // step = 10
+                  "failed",
+                  errorMessage,
+                  "Bot rejected customer mobile - invalid format"
+                );
+              }
               return;
             }
 
@@ -539,11 +590,20 @@ care@petrolubegroup.com
               phoneResult.international
             );
             if (!phoneValidation.isValid) {
-              await sendMessage(
-                sender,
-                `❌ رقم الهاتف مكرر أو غير صالح\n❌ Duplicate or invalid customer phone\n${phoneValidation.message}`,
-                goMenuButton
-              );
+              const errorMessage = `❌ رقم الهاتف مكرر أو غير صالح\n❌ Duplicate or invalid customer phone\n${phoneValidation.message}`;
+              await sendMessage(sender, errorMessage, goMenuButton);
+              
+              // Log bot error response
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  session.data.mechanicId,
+                  session.data.logParentId,
+                  11, // step = 11
+                  "failed",
+                  errorMessage,
+                  "Bot rejected customer mobile - duplicate or invalid"
+                );
+              }
               return;
             }
 
@@ -553,11 +613,33 @@ care@petrolubegroup.com
             sessionManager.setSession(sender, session);
 
             // Show confirmation of the formatted number
-            await sendMessage(
-              sender,
-              `👤 يرجى إدخال الاسم الكامل للعميل:\n👤 Please enter the customer's full name:`
-            );
+            const successMessage = `👤 يرجى إدخال الاسم الكامل للعميل:\n👤 Please enter the customer's full name:`;
+            await sendMessage(sender, successMessage);
+            
+            // Log successful customer mobile processing
+            if (session.data.logParentId) {
+              await createOilChangeLog(
+                session.data.mechanicId,
+                session.data.logParentId,
+                12, // step = 12
+                "passed",
+                successMessage,
+                "Bot accepted customer mobile and requested customer name"
+              );
+            }
           } else if (session.state === "customer_name") {
+            // Log mechanic's customer name input
+            if (session.data.logParentId) {
+              await createOilChangeLog(
+                session.data.mechanicId,
+                session.data.logParentId,
+                13, // step = 13
+                "passed",
+                message.text.body.trim(),
+                "Mechanic entered customer name"
+              );
+            }
+            
             const customerName = message.text.body.trim();
             session.data.customerName = customerName;
             sessionManager.setSession(sender, session);
@@ -602,12 +684,34 @@ care@petrolubegroup.com
                   status: "pending_confirmation",
                   submissionId: submissionId,
                 });
+                
+                // Log successful submission
+                if (session.data.logParentId) {
+                  await createOilChangeLog(
+                    session.data.mechanicId,
+                    session.data.logParentId,
+                    14, // step = 14
+                    "passed",
+                    `Oil change submission completed successfully. Submission ID: ${submissionId}`,
+                    "Oil change submission successful"
+                  );
+                }
+                
                 // Do NOT update wallet or send reward message here
-                await sendMessage(
-                  sender,
-                  `✅ تم تقديم الطلب بنجاح!\n\nيرجى انتظار موافقة العميل. سيتم إضافة المكافأة إلى محفظتك بعد تأكيد العميل.\n\n---\n\n✅ Submission successful!\n\nPlease wait for customer approval. Your reward will be added to your wallet after customer confirmation.`,
-                  goMenuButton
-                );
+                const successMessage = `✅ تم تقديم الطلب بنجاح!\n\nيرجى انتظار موافقة العميل. سيتم إضافة المكافأة إلى محفظتك بعد تأكيد العميل.\n\n---\n\n✅ Submission successful!\n\nPlease wait for customer approval. Your reward will be added to your wallet after customer confirmation.`;
+                await sendMessage(sender, successMessage, goMenuButton);
+                
+                // Log bot success response
+                if (session.data.logParentId) {
+                  await createOilChangeLog(
+                    session.data.mechanicId,
+                    session.data.logParentId,
+                    15, // step = 15
+                    "passed",
+                    successMessage,
+                    "Bot confirmed successful submission"
+                  );
+                }
                 // Ensure customer phone is in international format for WhatsApp
                 const {
                   formatSaudiPhoneNumber,
@@ -646,6 +750,19 @@ care@petrolubegroup.com
                     ? apiResponse.data.message
                     : "❌ فشل في تقديم تغيير الزيت. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.\n\n---\n\n❌ Oil change submission failed. Please try again or contact support.";
                 await sendMessage(sender, errorMsg, goMenuButton);
+                
+                // Log submission error
+                if (session.data.logParentId) {
+                  await createOilChangeLog(
+                    session.data.mechanicId,
+                    session.data.logParentId,
+                    14, // step = 14
+                    "failed",
+                    errorMsg,
+                    "Oil change submission failed"
+                  );
+                }
+                
                 session.state = "menu";
                 sessionManager.setSession(sender, session);
                 clearInactivityTimer(); // Clear timer after error
@@ -663,6 +780,19 @@ care@petrolubegroup.com
                 errorMsg = apiError.message;
               }
               await sendMessage(sender, errorMsg, goMenuButton);
+              
+              // Log submission error
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  session.data.mechanicId,
+                  session.data.logParentId,
+                  14, // step = 14
+                  "failed",
+                  errorMsg,
+                  "Oil change submission failed - API error"
+                );
+              }
+              
               session.state = "menu";
               sessionManager.setSession(sender, session);
               clearInactivityTimer(); // Clear timer after error
@@ -671,19 +801,42 @@ care@petrolubegroup.com
         } else if (message.type === "image") {
           const imageBuffer = await downloadImage(message.image.id);
           if (session.state === "qr_codes") {
+            // Log mechanic's image message
+            if (session.data.logParentId) {
+              await createOilChangeLog(
+                session.data.mechanicId,
+                session.data.logParentId,
+                3, // step = 3
+                "passed",
+                "Image sent by mechanic for QR codes",
+                "Mechanic sent QR codes photo"
+              );
+            }
+            
             const foilCount = await detectNumberOfFoils(imageBuffer);
             if (foilCount < 3) {
-              await sendMessage(
-                sender,
-                `❌ يجب أن تكون هناك 4 أغطية دائرية على الأقل في الصورة
+              const errorMessage = `❌ يجب أن تكون هناك 4 أغطية دائرية على الأقل في الصورة
 ❌ At least 4 foils must be visible in the image.
 
 الأغطية المكتشفة: ${foilCount}
 Detected foils: ${foilCount}
 
 يرجى إعادة التقاط الصورة والتأكد من أن هناك 4 أغطية دائرية على الأقل مرئية بوضوح
-Please retake the photo and ensure at least 4 foils are clearly visible.`
-              );
+Please retake the photo and ensure at least 4 foils are clearly visible.`;
+              
+              await sendMessage(sender, errorMessage);
+              
+              // Log bot error response
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  session.data.mechanicId,
+                  session.data.logParentId,
+                  4, // step = 4
+                  "failed",
+                  errorMessage,
+                  "Bot rejected QR codes photo - insufficient foils"
+                );
+              }
               return;
             }
             const qrResult = await scanQRCodes(imageBuffer);
@@ -718,17 +871,27 @@ Please retake the photo and ensure all QR codes are visible on the foils.`
               );
               return;
             }
-            if (qrCodes.length > 0) {
-              const qrValidation = await validateQRCodes(qrCodes);
-              if (!qrValidation.isValid) {
-                await sendMessage(
-                  sender,
-                  `❌ ${qrValidation.message}\n\nيرجى إعادة إرسال صورة الأغطية الدائرية (رموز QR) بدون تكرار.\nPlease resubmit the photo of the petromin foils (QR codes) without duplicates.`,
-                  goMenuButton
-                );
-                // Do NOT change state, stay in 'qr_codes'
-                return;
-              }
+              if (qrCodes.length > 0) {
+                const qrValidation = await validateQRCodes(qrCodes);
+                if (!qrValidation.isValid) {
+                  const errorMessage = `❌ ${qrValidation.message}\n\nيرجى إعادة إرسال صورة الأغطية الدائرية (رموز QR) بدون تكرار.\nPlease resubmit the photo of the petromin foils (QR codes) without duplicates.`;
+                  await sendMessage(sender, errorMessage, goMenuButton);
+                  
+                  // Log QR validation error
+                  if (session.data.logParentId) {
+                    await createOilChangeLog(
+                      session.data.mechanicId,
+                      session.data.logParentId,
+                      4, // step = 4
+                      "failed",
+                      errorMessage,
+                      "Bot rejected QR codes - validation failed"
+                    );
+                  }
+                  
+                  // Do NOT change state, stay in 'qr_codes'
+                  return;
+                }
               session.data.qrCodes = qrCodes;
               session.data.foilCount = foilCount;
               session.data.qrCodesMissing = qrCodesMissing;
@@ -748,56 +911,118 @@ Found ${qrCodes.length} QR codes:
               responseText += `\n${qrValidation.message}\n\n📸 الآن يرجى إرسال صورة لوحة السيارة
 📸 Now please send a photo of the car's number plate`;
               await sendMessage(sender, responseText, goMenuButton);
+              
+              // Log successful QR processing and bot response
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  session.data.mechanicId,
+                  session.data.logParentId,
+                  5, // step = 5
+                  "passed",
+                  responseText,
+                  "Bot processed QR codes successfully and requested number plate"
+                );
+              }
             } else {
-              await sendMessage(
-                sender,
-                `❌ لم يتم اكتشاف رموز QR
+              const errorMessage = `❌ لم يتم اكتشاف رموز QR
 ❌ No QR codes detected
 
 يرجى التأكد من أن جميع الأغطية الدائرية مرئية بوضوح والمحاولة مرة أخرى
-Please ensure all petromin foils are clearly visible and try again`,
-                goMenuButton
-              );
+Please ensure all petromin foils are clearly visible and try again`;
+              await sendMessage(sender, errorMessage, goMenuButton);
+              
+              // Log no QR codes detected error
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  session.data.mechanicId,
+                  session.data.logParentId,
+                  4, // step = 4
+                  "failed",
+                  errorMessage,
+                  "Bot rejected QR codes photo - no QR codes detected"
+                );
+              }
             }
           } else if (session.state === "number_plate") {
+            // Log mechanic's number plate image
+            if (session.data.logParentId) {
+              await createOilChangeLog(
+                session.data.mechanicId,
+                session.data.logParentId,
+                6, // step = 6
+                "passed",
+                "Image sent by mechanic for number plate",
+                "Mechanic sent number plate photo"
+              );
+            }
+            
             const plateNumber = await extractNumberPlate(imageBuffer);
             if (plateNumber) {
               // Duplication check before proceeding
               const { validateCarPlate } = require("../apiService");
               const plateValidation = await validateCarPlate(plateNumber);
               if (!plateValidation.isValid) {
-                await sendMessage(
-                  sender,
-                  `❌ رقم اللوحة مكرر أو غير صالح\n❌ Duplicate or invalid plate number\n${plateValidation.message}`,
-                  goMenuButton
-                );
+                const errorMessage = `❌ رقم اللوحة مكرر أو غير صالح\n❌ Duplicate or invalid plate number\n${plateValidation.message}`;
+                await sendMessage(sender, errorMessage, goMenuButton);
+                
+                // Log bot error response
+                if (session.data.logParentId) {
+                  await createOilChangeLog(
+                    session.data.mechanicId,
+                    session.data.logParentId,
+                    7, // step = 7
+                    "failed",
+                    errorMessage,
+                    "Bot rejected number plate - duplicate or invalid"
+                  );
+                }
                 return;
               }
               session.data.plateNumber = plateNumber;
               session.state = "customer_mobile";
               sessionManager.setSession(sender, session);
-              await sendMessage(
-                sender,
-                `🚗 تم اكتشاف لوحة السيارة
+              
+              const successMessage = `🚗 تم اكتشاف لوحة السيارة
 🚗 Number Plate Detected
 
 رقم اللوحة: ${plateNumber}
 Plate Number: ${plateNumber}
 
 📱 يرجى إدخال رقم هاتف العميل:
-📱 Please enter the customer's mobile number:`,
-                goMenuButton
-              );
+📱 Please enter the customer's mobile number:`;
+              
+              await sendMessage(sender, successMessage, goMenuButton);
+              
+              // Log successful number plate processing
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  session.data.mechanicId,
+                  session.data.logParentId,
+                  8, // step = 8
+                  "passed",
+                  successMessage,
+                  "Bot processed number plate successfully and requested customer mobile"
+                );
+              }
             } else {
-              await sendMessage(
-                sender,
-                `❌ لم يتم اكتشاف لوحة السيارة
+              const errorMessage = `❌ لم يتم اكتشاف لوحة السيارة
 ❌ Could not detect the number plate
 
 يرجى التأكد من أن اللوحة مرئية بوضوح والمحاولة مرة أخرى
-Please ensure the plate is clearly visible and try again`,
-                goMenuButton
-              );
+Please ensure the plate is clearly visible and try again`;
+              await sendMessage(sender, errorMessage, goMenuButton);
+              
+              // Log number plate detection failure
+              if (session.data.logParentId) {
+                await createOilChangeLog(
+                  session.data.mechanicId,
+                  session.data.logParentId,
+                  7, // step = 7
+                  "failed",
+                  errorMessage,
+                  "Bot failed to detect number plate"
+                );
+              }
             }
           } else {
             await sendMessage(

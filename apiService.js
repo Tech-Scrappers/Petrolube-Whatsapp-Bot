@@ -107,6 +107,41 @@ async function logOilChange(mechanicId, customerMobile, plateNumber, qrCodes, oi
     return key;
 }
 
+// Create oil change conversation log
+async function createOilChangeLog(mechanicId, parentId = null, step = 1, status = "passed", details = null, message = null) {
+    try {
+        const logData = {
+            event: 'oil_change_submission',
+            parent_id: parentId,
+            step: step,
+            status: status,
+            details: details,
+            message: message
+        };
+
+        const response = await axios.post(
+            `${EXTERNAL_API_BASE_URL}/bot/mechanics/${mechanicId}/oil-change-logs`,
+            logData,
+            {
+                headers: {
+                    'X-Petrolube-Secret-Key': process.env.PETROLUBE_SECRET_KEY,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        if (response.status >= 200 && response.status < 300) {
+            return response.data;
+        } else {
+            console.error('Error creating oil change log:', response.status, response.data);
+            return null;
+        }
+    } catch (error) {
+        console.error('Error creating oil change log:', error?.response?.data || error.message);
+        return null;
+    }
+}
+
 // Fetch leaderboard data
 async function fetchLeaderboard(mechanicId) {
     try {
@@ -240,5 +275,6 @@ module.exports = {
     PYTHON_QR_API_URL,
     EXTERNAL_API_BASE_URL,
     validateCarPlate,
-    validateCustomerPhone
+    validateCustomerPhone,
+    createOilChangeLog
 }; 
