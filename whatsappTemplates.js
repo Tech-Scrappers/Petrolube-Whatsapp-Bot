@@ -1,4 +1,26 @@
 module.exports = {
+  customer_approval_one: {
+    name: "customer_approval_one",
+    language: { code: "en_US" },
+    components: [
+      {
+        type: "header",
+        format: "TEXT",
+        text: "Car Oil Change"
+      },
+      {
+        type: "body",
+        text: "Hi {{1}},\n\nYour car's oil change for {{2}} has been successfully completed."
+      },
+      {
+        type: "buttons",
+        buttons: [
+          { type: "quick_reply", text: "YES" },
+          { type: "quick_reply", text: "No" }
+        ]
+      }
+    ]
+  },
   customer_approval: {
     name: "customer_approval_utility",
     language: { code: "en" },

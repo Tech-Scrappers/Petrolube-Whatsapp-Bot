@@ -119,6 +119,29 @@ router.post("/send-customer-reminder-message", async (req, res) => {
   }
 });
 
+// Public endpoint to send customer approval template (customer_approval_one)
+router.post("/send-customer-approval", async (req, res) => {
+  const { mobile_number, customer_name, plate_number } = req.body;
+  if (!mobile_number || !customer_name || !plate_number) {
+    return res.status(400).json({
+      error: "Missing required fields: mobile_number, customer_name, plate_number",
+    });
+  }
+  try {
+    await sendTemplateMessageByName(
+      mobile_number,
+      "customer_approval_one",
+      [customer_name, plate_number]
+    );
+    res.status(200).json({
+      success: true,
+      message: "Customer approval template sent.",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Failed to send message." });
+  }
+});
+
 // Endpoint to send customer mega prize template message
 router.post("/send-customer-mega-prize-message", async (req, res) => {
   const { mobile_number } = req.body;
@@ -864,7 +887,7 @@ care@petrolubegroup.com
 
                 await sendTemplateMessageByName(
                   whatsappPhoneResult.international,
-                  "customer_approval",
+                  "customer_approval_one",
                   [session.data.customerName, session.data.plateNumber]
                 );
                 sessionManager.setCustomerToLog(
