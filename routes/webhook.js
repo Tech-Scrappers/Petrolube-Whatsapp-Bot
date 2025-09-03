@@ -876,10 +876,6 @@ care@petrolubegroup.com
                   logId: logId,
                   submissionId: submissionId,
                 });
-                console.log(
-                  "📊 Current oil change logs:",
-                  sessionManager.getOilChangeLogs()
-                );
                 session.data.logId = logId;
                 session.data.submissionId = submissionId;
                 session.data.customerMobile = phoneResult.international; // Update session with international format
@@ -1325,10 +1321,6 @@ Type 'menu' to start over`,
                 "⚠️ No pending log found for customer confirmation:",
                 customerMobile
               );
-              console.log(
-                "📊 All current oil change logs:",
-                sessionManager.getOilChangeLogs()
-              );
             }
           } else if (buttonId === "NO") {
             console.log("❌ Customer disputed - looking for pending log...");
@@ -1453,10 +1445,6 @@ Type 'menu' to start over`,
               console.log(
                 "⚠️ No pending log found for customer:",
                 customerMobile
-              );
-              console.log(
-                "📊 All current oil change logs:",
-                sessionManager.getOilChangeLogs()
               );
               await sendMessage(
                 customerMobile,
