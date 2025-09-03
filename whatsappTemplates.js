@@ -1,6 +1,6 @@
 module.exports = {
   customer_approval: {
-    name: "cusotmer_approval",
+    name: "customer_approval_utility",
     language: { code: "en" },
     components: [
       {
