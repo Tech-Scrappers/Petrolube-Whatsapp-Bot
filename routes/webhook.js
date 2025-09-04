@@ -24,6 +24,7 @@ const {
 } = require("../apiService");
 const { showMainMenu } = require("../menuService");
 const { sendTemplateMessageByName } = require("../whatsappService");
+const { formatSaudiPhoneNumber } = require("../phoneNumberUtils");
 
 const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
 
@@ -128,17 +129,175 @@ router.post("/send-customer-approval", async (req, res) => {
     });
   }
   try {
+    console.log("[Recovery] /send-customer-approval hit", { mobile_number, customer_name, plate_number });
+    // Normalize phone number to international format
+    let formatted = formatSaudiPhoneNumber(mobile_number);
+    // Fallback: if 10 digits starting with '5', try prefixing '0' to match mechanic flow tolerance
+    if (!formatted?.isValid && /^5\d{9}$/.test(String(mobile_number))) {
+      formatted = formatSaudiPhoneNumber(`0${mobile_number}`);
+    }
+    if (!formatted?.isValid) {
+      console.warn("[Recovery] Invalid mobile_number format", { mobile_number, error: formatted?.error });
+      return res.status(400).json({
+        error: "Invalid mobile_number format",
+        details: formatted?.error || "Number must be a valid Saudi mobile"
+      });
+    }
+    const toNumber = formatted.international;
+    console.log("[Recovery] Normalized number", { input: mobile_number, normalized: toNumber });
+
     await sendTemplateMessageByName(
-      mobile_number,
+      toNumber,
       "customer_approval_one",
       [customer_name, plate_number]
     );
+    console.log("[Recovery] Template sent", { to: toNumber, template: "customer_approval_one" });
     res.status(200).json({
       success: true,
       message: "Customer approval template sent.",
     });
   } catch (error) {
+    console.error("[Recovery] Failed to send /send-customer-approval", { error: error?.response?.data || error.message });
     res.status(500).json({ error: error.message || "Failed to send message." });
+  }
+});
+
+// Recovery endpoint for customers who missed approval messages
+router.post("/recover-customer-approvals", async (req, res) => {
+  const { submissions } = req.body;
+  console.log("[Recovery] /recover-customer-approvals hit", { submissions_count: Array.isArray(submissions) ? submissions.length : 0 });
+  
+  if (!submissions || !Array.isArray(submissions) || submissions.length === 0) {
+    return res.status(400).json({
+      error: "Missing required field: submissions (must be a non-empty array)",
+    });
+  }
+
+  try {
+    // Validate submission data structure
+    const validSubmissions = submissions.filter(sub => 
+      sub.id && sub.mechanic_id && sub.customer_phone && sub.car_plate_number
+    );
+
+    if (validSubmissions.length === 0) {
+      return res.status(400).json({
+        error: "No valid submissions found. Each submission must have: id, mechanic_id, customer_phone, car_plate_number"
+      });
+    }
+
+    // Recover customer approvals in session manager
+    // Normalize phone numbers before recovery
+    const normalizedSubmissions = [];
+    const invalidNumbers = [];
+    for (const sub of validSubmissions) {
+      let formatted = formatSaudiPhoneNumber(sub.customer_phone);
+      // Fallback: if 10 digits starting with '5', try prefixing '0' to match mechanic flow tolerance
+      if (!formatted?.isValid && /^5\d{9}$/.test(String(sub.customer_phone))) {
+        formatted = formatSaudiPhoneNumber(`0${sub.customer_phone}`);
+      }
+      if (!formatted?.isValid) {
+        invalidNumbers.push({
+          submissionId: sub.id,
+          customer_phone: sub.customer_phone,
+          error: formatted?.error || "Invalid Saudi mobile format"
+        });
+        continue;
+      }
+      const normalized = formatted.international;
+      normalizedSubmissions.push({
+        ...sub,
+        customer_phone: normalized
+      });
+      console.log("[Recovery] Normalized submission phone", { submissionId: sub.id, input: sub.customer_phone, normalized });
+    }
+    console.log("[Recovery] Normalization summary", { valid: normalizedSubmissions.length, invalid: invalidNumbers.length });
+
+    const recoveryResults = sessionManager.bulkRecoverCustomerApprovals(normalizedSubmissions);
+    
+    // Send approval messages to recovered customers
+    const messageResults = [];
+    
+    for (const result of recoveryResults) {
+      if (result.status === "recovered") {
+        try {
+          // Find customer name from submission data
+          const submission = normalizedSubmissions.find(s => s.id === result.submissionId);
+          const customerName = submission.customer_name || "Customer";
+          console.log("[Recovery] Sending template", { to: submission.customer_phone, submissionId: result.submissionId, template: "customer_approval_one" });
+          
+          await sendTemplateMessageByName(
+            submission.customer_phone,
+            "customer_approval_one",
+            [customerName, submission.car_plate_number]
+          );
+          console.log("[Recovery] Template sent", { to: submission.customer_phone, submissionId: result.submissionId });
+          
+          messageResults.push({
+            customerPhone: result.customerPhone,
+            status: "message_sent",
+            message: "Approval template sent successfully"
+          });
+          
+          // Add delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.error("[Recovery] Failed to send template", { submissionId: result.submissionId, error: error?.response?.data || error.message });
+          messageResults.push({
+            customerPhone: result.customerPhone,
+            status: "message_failed",
+            error: error.message
+          });
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Recovery process completed. ${recoveryResults.filter(r => r.status === "recovered").length} customers recovered.`,
+      recovery: recoveryResults,
+      messaging: messageResults,
+      invalid_numbers: invalidNumbers,
+      total_processed: validSubmissions.length,
+      total_valid_processed: normalizedSubmissions.length,
+      total_invalid: invalidNumbers.length
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      error: error.message || "Failed to recover customer approvals.",
+      details: error?.response?.data || null
+    });
+  }
+});
+
+// Check customer approval status
+router.get("/customer-approval-status/:phone", async (req, res) => {
+  const { phone } = req.params;
+  
+  if (!phone) {
+    return res.status(400).json({
+      error: "Missing phone parameter"
+    });
+  }
+
+  try {
+    const hasPending = sessionManager.hasPendingApproval(phone);
+    const customerLog = sessionManager.getCustomerToLog(phone);
+    const logDetails = customerLog ? sessionManager.getOilChangeLogByKey(customerLog) : null;
+    
+    res.status(200).json({
+      success: true,
+      phone: phone,
+      hasPendingApproval: hasPending,
+      customerLog: customerLog,
+      logDetails: logDetails
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      error: error.message || "Failed to check customer approval status."
+    });
   }
 });
 

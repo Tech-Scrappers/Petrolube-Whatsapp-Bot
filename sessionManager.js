@@ -48,6 +48,68 @@ function getCustomerToLog(customerMobile) {
     return customerToLog.get(customerMobile);
 }
 
+// Recovery functions for customers who missed approval messages
+function hasPendingApproval(customerMobile) {
+    return customerToLog.has(customerMobile) && 
+           oilChangeLogs.has(customerToLog.get(customerMobile)) &&
+           oilChangeLogs.get(customerToLog.get(customerMobile)).status === "pending_confirmation";
+}
+
+function recoverCustomerApproval(submissionData) {
+    // submissionData should contain: { id, mechanic_id, customer_phone, car_plate_number, qr_codes, created_at }
+    const logId = `${submissionData.mechanic_id}_${Date.now()}_recovered`;
+    
+    const logEntry = {
+        mechanicId: submissionData.mechanic_id,
+        customerMobile: submissionData.customer_phone,
+        plateNumber: submissionData.car_plate_number,
+        qrCodes: submissionData.qr_codes || [],
+        timestamp: submissionData.created_at || new Date().toISOString(),
+        status: "pending_confirmation",
+        submissionId: submissionData.id,
+        recovered: true, // Flag to indicate this was recovered
+        recoveredAt: new Date().toISOString()
+    };
+    
+    // Add the log
+    addOilChangeLog(logId, logEntry);
+    
+    // Map customer to log
+    setCustomerToLog(submissionData.customer_phone, logId);
+    
+    return logId;
+}
+
+function bulkRecoverCustomerApprovals(submissionsArray) {
+    const results = [];
+    
+    for (const submission of submissionsArray) {
+        try {
+            const logId = recoverCustomerApproval(submission);
+            results.push({
+                customerPhone: submission.customer_phone,
+                submissionId: submission.id,
+                logId: logId,
+                status: "recovered",
+                message: "Successfully recovered customer approval log"
+            });
+        } catch (error) {
+            results.push({
+                customerPhone: submission.customer_phone,
+                submissionId: submission.id,
+                status: "failed",
+                error: error.message
+            });
+        }
+    }
+    
+    return results;
+}
+
+function getRecoveredLogs() {
+    return Array.from(oilChangeLogs.values()).filter(log => log.recovered === true);
+}
+
 function isMessageProcessed(messageId) {
     return processedMessageIds.has(messageId);
 }
@@ -89,6 +151,10 @@ module.exports = {
     getOilChangeLogsByMechanic,
     setCustomerToLog,
     getCustomerToLog,
+    hasPendingApproval,
+    recoverCustomerApproval,
+    bulkRecoverCustomerApprovals,
+    getRecoveredLogs,
     mechanicSessions,
     customerConfirmations,
     mechanicWallets,
