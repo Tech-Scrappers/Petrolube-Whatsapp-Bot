@@ -326,6 +326,31 @@ router.post("/send-customer-mega-prize-message", async (req, res) => {
   }
 });
 
+// Endpoint to send customer mega prize template message
+router.post("/send-shop-compliance-message", async (req, res) => {
+  const { shop_id, shop_name, customer_name, customer_mobile, current_bottle_count, required_bottles, missing_bottles } = req.body;
+  if (!shop_id || !shop_name || !customer_name || !customer_mobile || !current_bottle_count || !required_bottles || !missing_bottles) {
+    return res.status(400).json({
+      error: "Missing required fields: shop_id, shop_name, customer_name, customer_mobile, current_bottle_count, required_bottles, missing_bottles",
+    });
+  }
+  try {
+    // Send English message
+    await sendTemplateMessageByName(
+      customer_mobile,
+      "shop_compliance",
+      [required_bottles, current_bottle_count, missing_bottles]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Shop compliance message sent.",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Failed to send message." });
+  }
+});
+
 
 // Endpoint to send choose petromin oil template message
 router.post("/send-choose-petromin-oil-message", async (req, res) => {
