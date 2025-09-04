@@ -1403,13 +1403,24 @@ Type 'menu' to start over`,
               return;
             }
 
-            const pendingLog = sessionManager
-              .getOilChangeLogs()
-              .find(
-                (log) =>
-                  log.customerMobile === customerMobile &&
-                  log.status === "pending_confirmation"
-              );
+            // Try mapped log first, then fallback to scanning all logs
+            let pendingLog = null;
+            const mappedLogId = sessionManager.getCustomerToLog(customerMobile);
+            if (mappedLogId) {
+              const mappedLog = sessionManager.getOilChangeLogByKey(mappedLogId);
+              if (mappedLog && mappedLog.status === "pending_confirmation") {
+                pendingLog = mappedLog;
+              }
+            }
+            if (!pendingLog) {
+              pendingLog = sessionManager
+                .getOilChangeLogs()
+                .find(
+                  (log) =>
+                    log.customerMobile === customerMobile &&
+                    log.status === "pending_confirmation"
+                );
+            }
             console.log(
               "🔍 Found pending log:",
               pendingLog
@@ -1532,13 +1543,24 @@ Type 'menu' to start over`,
               return;
             }
 
-            const pendingLog = sessionManager
-              .getOilChangeLogs()
-              .find(
-                (log) =>
-                  log.customerMobile === customerMobile &&
-                  log.status === "pending_confirmation"
-              );
+            // Try mapped log first, then fallback to scanning all logs
+            let pendingLog = null;
+            const mappedLogId = sessionManager.getCustomerToLog(customerMobile);
+            if (mappedLogId) {
+              const mappedLog = sessionManager.getOilChangeLogByKey(mappedLogId);
+              if (mappedLog && mappedLog.status === "pending_confirmation") {
+                pendingLog = mappedLog;
+              }
+            }
+            if (!pendingLog) {
+              pendingLog = sessionManager
+                .getOilChangeLogs()
+                .find(
+                  (log) =>
+                    log.customerMobile === customerMobile &&
+                    log.status === "pending_confirmation"
+                );
+            }
             console.log(
               "🔍 Found pending log for dispute:",
               pendingLog
