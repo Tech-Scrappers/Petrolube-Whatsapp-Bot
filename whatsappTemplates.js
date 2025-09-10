@@ -215,4 +215,14 @@ module.exports = {
       }
     ]
   },
+  september_mega_prizes_customers: {
+    name: "september_mega_prizes_customers",
+    language: { code: "ar" },
+    components: [
+      {
+        type: "body",
+        text: `خليكم جاهزين للسحب الكبير يوم 11مع حملة "اختار زيوت بترومين" من بترولوب، ولا تنسوا تستخدموا عجلة الجوائز للمزيد من الهدايا، كونوا على اتم الاستعداد.\n\nWin mega prizes on 11th with ‘Choose Petromin Oil’ campaign from Petrolube.\nDon’t forget to spin the wheel for more rewards, and get ready to win big!`
+      }
+    ]
+  },
 }; 
