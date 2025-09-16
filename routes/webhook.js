@@ -1745,10 +1745,14 @@ Type 'menu' to start over`,
           });
 
           const buttonId = message.interactive?.button_reply?.id;
+          const buttonTitle = message.interactive?.button_reply?.title;
+          const normalizedPayload = (buttonId || buttonTitle || "").trim().toUpperCase();
           const customerMobile = sender;
 
           console.log("🔍 Interactive button pressed:", {
             buttonId: buttonId,
+            buttonTitle: buttonTitle,
+            normalizedPayload: normalizedPayload,
             customerMobile: customerMobile,
             messageType: message.type,
           });
@@ -1759,6 +1763,184 @@ Type 'menu' to start over`,
             clearInactivityTimer(); // Clear timer when returning to menu
             await showMainMenu(sender);
             return;
+          } else if (normalizedPayload === "YES") {
+            console.log("✅ Interactive YES - looking for pending log...");
+
+            const confirmedCount = sessionManager.getConfirmedOilChangeCountForCustomer(customerMobile);
+
+            let pendingLog = null;
+            const mappedLogId = sessionManager.getCustomerToLog(customerMobile);
+            if (mappedLogId) {
+              const mappedLog = sessionManager.getOilChangeLogByKey(mappedLogId);
+              if (mappedLog && mappedLog.status === "pending_confirmation") {
+                pendingLog = mappedLog;
+              }
+            }
+            if (!pendingLog) {
+              pendingLog = sessionManager
+                .getOilChangeLogs()
+                .find(
+                  (log) =>
+                    log.customerMobile === customerMobile &&
+                    log.status === "pending_confirmation"
+                );
+            }
+            console.log(
+              "🔍 Found pending log (interactive YES):",
+              pendingLog
+                ? {
+                    submissionId: pendingLog.submissionId,
+                    mechanicId: pendingLog.mechanicId,
+                    customerMobile: pendingLog.customerMobile,
+                    status: pendingLog.status,
+                  }
+                : "No pending log found"
+            );
+
+            if (confirmedCount >= 2 && !pendingLog) {
+              await sendMessage(
+                customerMobile,
+                `⚠️ *تم الوصول إلى الحد الأقصى*\n\nلقد قمت بتأكيد عمليتي تغيير زيت بالفعل لهذا الرقم.\n\nلا يمكن تأكيد عمليات إضافية من نفس الرقم.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Limit Reached*\n\nYou have already confirmed 2 oil changes with this number.\n\nAdditional confirmations are not allowed from the same number.`
+              );
+              return;
+            }
+
+            if (pendingLog && pendingLog.submissionId) {
+              try {
+                const statusResponse = await axios.patch(
+                  `${process.env.EXTERNAL_API_BASE_URL}/bot/oil-change-status/${pendingLog.submissionId}`,
+                  { status: "confirmed" },
+                  {
+                    headers: {
+                      "X-Petrolube-Secret-Key": process.env.PETROLUBE_SECRET_KEY,
+                    },
+                  }
+                );
+
+                if (statusResponse.status >= 200 && statusResponse.status < 300) {
+                  const responseData = statusResponse.data.data;
+                  pendingLog.status = "confirmed";
+                  pendingLog.confirmedAt = new Date().toISOString();
+
+                  const mechanicPhoneNumber = responseData.mechanic.mobile_number;
+                  const carPlateNumber = pendingLog.plateNumber || "N/A";
+
+                  await sendMessage(
+                    mechanicPhoneNumber,
+                    `💰 *تم الحصول على المكافأة!*\n\nتم تأكيد تغيير الزيت من قبل العميل\n\n🚗 رقم اللوحة: ${carPlateNumber}\nCar Plate: ${carPlateNumber}\n\n✅ تم إضافة 4 ريال إلى محفظتك\n\nلفحص رصيد المحفظة، اكتب "2" أو "wallet"\n\n---\n\n💰 *Reward Earned!*\n\nOil change confirmed by customer.\n\n🚗 Car Plate: ${carPlateNumber}\n\n✅ +4 SAR added to your wallet\n\nTo check wallet balance, type "2" or "wallet"`,
+                    goMenuButton
+                  );
+
+                  const spinUrl = responseData.spin_url;
+                  let customerMessage;
+                  if (spinUrl) {
+                    customerMessage = `✅ *تم تأكيد تغيير الزيت!*\n\nشكراً لك على التأكيد!\n\n🎰 انقر هنا لتدوير عجلة المكافآت:\n${spinUrl}\n\n---\n\n✅ *Oil Change Confirmed!*\n\nThank you for confirming!\n\n🎉 Your chance to win! 🎉\n 🎰 Tap below to spin the Reward Wheel & unlock your surprise!:\n${spinUrl}`;
+                  } else {
+                    customerMessage = `✅ *تم تأكيد تغيير الزيت!*\n\nشكراً لك على التأكيد!\n\nسيتم إرسال رابط عجلة المكافآت قريباً.\n\n---\n\n✅ *Oil Change Confirmed!*\n\nThank you for confirming!\n\nThe reward wheel link will be sent shortly.`;
+                  }
+                  await sendMessage(customerMobile, customerMessage);
+                }
+              } catch (error) {
+                await sendMessage(
+                  customerMobile,
+                  `❌ حدث خطأ أثناء تأكيد تغيير الزيت. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.\n\n---\n\n❌ Error occurred while confirming oil change. Please try again or contact support.`
+                );
+              }
+            }
+          } else if (normalizedPayload === "NO") {
+            console.log("❌ Interactive NO - looking for pending log...");
+
+            // First check if customer has already made a decision
+            const existingLog = sessionManager
+              .getOilChangeLogs()
+              .find((log) => log.customerMobile === customerMobile);
+
+            if (
+              existingLog &&
+              (existingLog.status === "confirmed" ||
+                existingLog.status === "disputed")
+            ) {
+              await sendMessage(
+                customerMobile,
+                `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
+                  existingLog.status === "confirmed" ? "تأكيد" : "رفض"
+                } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\نللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
+                  existingLog.status === "confirmed" ? "confirmed" : "disputed"
+                } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
+              );
+              return;
+            }
+
+            let pendingLog = null;
+            const mappedLogId = sessionManager.getCustomerToLog(customerMobile);
+            if (mappedLogId) {
+              const mappedLog = sessionManager.getOilChangeLogByKey(mappedLogId);
+              if (mappedLog && mappedLog.status === "pending_confirmation") {
+                pendingLog = mappedLog;
+              }
+            }
+            if (!pendingLog) {
+              pendingLog = sessionManager
+                .getOilChangeLogs()
+                .find(
+                  (log) =>
+                    log.customerMobile === customerMobile &&
+                    log.status === "pending_confirmation"
+                );
+            }
+            console.log(
+              "🔍 Found pending log for dispute (interactive):",
+              pendingLog
+                ? {
+                    submissionId: pendingLog.submissionId,
+                    mechanicId: pendingLog.mechanicId,
+                    customerMobile: pendingLog.customerMobile,
+                    status: pendingLog.status,
+                  }
+                : "No pending log found"
+            );
+
+            if (pendingLog && pendingLog.submissionId) {
+              try {
+                const statusResponse = await axios.patch(
+                  `${process.env.EXTERNAL_API_BASE_URL}/bot/oil-change-status/${pendingLog.submissionId}`,
+                  { status: "disputed" },
+                  {
+                    headers: {
+                      "X-Petrolube-Secret-Key": process.env.PETROLUBE_SECRET_KEY,
+                    },
+                  }
+                );
+
+                if (statusResponse.status >= 200 && statusResponse.status < 300) {
+                  const responseData = statusResponse.data.data;
+                  pendingLog.status = "disputed";
+                  pendingLog.disputedAt = new Date().toISOString();
+
+                  await sendMessage(
+                    customerMobile,
+                    `❌ *تم تقديم النزاع*\n\nتم تسجيل نزاع تغيير الزيت الخاص بك\n\nسيتصل بك فريقنا خلال 24 ساعة لحل هذه المشكلة\n\n---\n\n❌ *Dispute Filed*\n\nYour oil change dispute has been recorded\n\nOur team will contact you within 24 hours to resolve this issue.`
+                  );
+
+                  const mechanicPhoneNumber = responseData.mechanic.mobile_number;
+                  const carPlateNumber = pendingLog.plateNumber || "N/A";
+                  await sendMessage(
+                    mechanicPhoneNumber,
+                    `❌ *تم تقديم نزاع من العميل*\n\nتم تقديم نزاع على تغيير الزيت من قبل العميل\n\n🚗 رقم اللوحة: ${carPlateNumber}\nCar Plate: ${carPlateNumber}\n\nيرجى الاتصال بدعم العملاء:\ncare@petrolubegroup.com\n+966543652552\n\n---\n\n❌ *Customer Dispute Filed*\n\nA dispute has been filed by the customer for this oil change\n\n🚗 Car Plate: ${carPlateNumber}\n\nPlease contact customer support:\ncare@petrolubegroup.com\n+966543652552`
+                  );
+                }
+              } catch (error) {
+                await sendMessage(
+                  customerMobile,
+                  `❌ حدث خطأ أثناء تقديم النزاع. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.\n\n---\n\n❌ Error occurred while filing dispute. Please try again or contact support.`
+                );
+              }
+            } else {
+              await sendMessage(
+                customerMobile,
+                `❌ *تم تقديم النزاع*\n\nتم تسجيل نزاع تغيير الزيت الخاص بك\n\nسيتصل بك فريقنا خلال 24 ساعة لحل هذه المشكلة\n\nللمساعدة الفورية: care@petrolubegroup.com\n+966543652552\n\n---\n\n❌ *Dispute Filed*\n\nYour oil change dispute has been recorded\n\nOur team will contact you within 24 hours to resolve this issue\n\nFor immediate assistance: care@petrolubegroup.com\n+966543652552`
+              );
+            }
           }
         } else {
           console.log(
