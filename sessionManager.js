@@ -166,5 +166,9 @@ module.exports = {
     inactivityTimers,
     setInactivityTimer,
     clearInactivityTimer,
-    hasInactivityTimer
+    hasInactivityTimer,
+    // Counts how many oil changes this customer has confirmed historically
+    getConfirmedOilChangeCountForCustomer: function(customerMobile) {
+        return Array.from(oilChangeLogs.values()).filter(log => log.customerMobile === customerMobile && log.status === "confirmed").length;
+    }
 }; 

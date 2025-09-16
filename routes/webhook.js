@@ -1461,30 +1461,8 @@ Type 'menu' to start over`,
           if (buttonId === "YES") {
             console.log("✅ Customer confirmed - looking for pending log...");
 
-            // First check if customer has already made a decision
-            const existingLog = sessionManager
-              .getOilChangeLogs()
-              .find((log) => log.customerMobile === customerMobile);
-
-            if (
-              existingLog &&
-              (existingLog.status === "confirmed" ||
-                existingLog.status === "disputed")
-            ) {
-              console.log(
-                "⚠️ Customer already made a decision:",
-                existingLog.status
-              );
-              await sendMessage(
-                customerMobile,
-                `⚠️ *لا يمكن تغيير القرار*\n\nلقد قمت بالفعل بـ ${
-                  existingLog.status === "confirmed" ? "تأكيد" : "رفض"
-                } تغيير الزيت.\n\nلا يمكن تغيير القرار بعد إرساله.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Decision Already Made*\n\nYou have already ${
-                  existingLog.status === "confirmed" ? "confirmed" : "disputed"
-                } this oil change.\n\nYour decision cannot be changed.\n\nFor assistance: care@petrolubegroup.com\n+966543652552`
-              );
-              return;
-            }
+            // Count past confirmations to enforce per-customer cap of 2
+            const confirmedCount = sessionManager.getConfirmedOilChangeCountForCustomer(customerMobile);
 
             // Try mapped log first, then fallback to scanning all logs
             let pendingLog = null;
@@ -1515,6 +1493,15 @@ Type 'menu' to start over`,
                   }
                 : "No pending log found"
             );
+
+            // If customer already reached the cap and there is no pending submission, block further confirmations
+            if (confirmedCount >= 2 && !pendingLog) {
+              await sendMessage(
+                customerMobile,
+                `⚠️ *تم الوصول إلى الحد الأقصى*\n\nلقد قمت بتأكيد عمليتي تغيير زيت بالفعل لهذا الرقم.\n\nلا يمكن تأكيد عمليات إضافية من نفس الرقم.\n\nللمساعدة: care@petrolubegroup.com\n+966543652552\n\n---\n\n⚠️ *Limit Reached*\n\nYou have already confirmed 2 oil changes with this number.\n\nAdditional confirmations are not allowed from the same number.`
+              );
+              return;
+            }
 
             if (pendingLog && pendingLog.submissionId) {
               try {
