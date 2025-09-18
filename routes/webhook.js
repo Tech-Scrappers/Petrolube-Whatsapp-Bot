@@ -351,6 +351,65 @@ router.post("/send-shop-compliance-message", async (req, res) => {
   }
 });
 
+// send hero_mechanics_september message
+router.post("/send-hero-mechanics-september-message", async (req, res) => {
+  const { mobile_numbers } = req.body;
+  if (!mobile_numbers || !Array.isArray(mobile_numbers) || mobile_numbers.length === 0) {
+    return res.status(400).json({
+      error: "Missing required fields: mobile_numbers (must be a non-empty array)",
+    });
+  }
+
+  // Limit to 100 items
+  const limitedNumbers = mobile_numbers.slice(0, 100);
+  
+  try {
+    const results = [];
+    
+    for (let i = 0; i < limitedNumbers.length; i++) {
+      const mobile_number = limitedNumbers[i];
+      
+      try {
+        // Send message to current number
+        await sendTemplateMessageByName(
+          mobile_number,
+          "hero_mechanics_september",
+          []
+        );
+        
+        results.push({
+          mobile_number,
+          status: "success",
+          message: "Message sent successfully"
+        });
+        
+        // Add 0.5 second delay before next message (except for the last one)
+        if (i < limitedNumbers.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+      } catch (error) {
+        results.push({
+          mobile_number,
+          status: "error",
+          message: error.message || "Failed to send message"
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Processed ${limitedNumbers.length} mobile numbers`,
+      results: results,
+      total_processed: limitedNumbers.length
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Failed to process messages." });
+  }
+});
+
+
 
 // Endpoint to send choose petromin oil template message
 router.post("/send-choose-petromin-oil-message", async (req, res) => {
